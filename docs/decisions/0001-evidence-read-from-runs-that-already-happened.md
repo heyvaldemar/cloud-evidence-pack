@@ -1,6 +1,6 @@
 # 1. Evidence read from the cloud runs that already happened, in a repository of its own
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-11
 
 ## Context
