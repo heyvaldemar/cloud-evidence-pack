@@ -32,6 +32,19 @@ framework:
   title: NIST SP 800-53 Rev. 5.2.0
   catalog: NIST_SP-800-53_rev5_catalog.json
 
+# Other frameworks: related criteria beside a finding, never a finding. Each
+# comes from a crosswalk published by NIST or by the framework's owner,
+# pinned in catalogs.lock by sha256 and read as it is: what it relates to a
+# control and to that control alone, and nothing where it relates nothing.
+# A crosswalk relates two documents. It says nothing about a system, and
+# NIST's own page warns against reading its rows as equivalence.
+crosswalks:
+  iso-27001-2022:
+    title: ISO/IEC 27001:2022
+    by: NIST's own crosswalk from SP 800-53 Rev. 5 (OLIR informative reference 155, version 1.0.0, posted 2023-11-13)
+    file: sp800-53r5-to-iso-27001-mapping-2022-OLIR-2023-10-12-UPDATED.xlsx
+    page: https://csrc.nist.gov/projects/olir/informative-reference-catalog/details?referenceId=155
+
 # One leg per cloud: the workflow whose scheduled runs are read, and the
 # artifact each run keeps. A run started by hand, on another branch or by
 # another workflow is never a pack's source.

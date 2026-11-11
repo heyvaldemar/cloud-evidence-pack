@@ -40,6 +40,7 @@ the gate's work), and 2 when the run is refused or cannot be read: no
 evidence is a failure, never a pass.
 """
 import hashlib
+import html
 import io
 import json
 import os
@@ -236,6 +237,45 @@ def judge(mapping, cloud, checks, plants):
 # --- the OSCAL documents ---------------------------------------------------
 
 _CATALOGS = {}
+_CROSSWALKS = {}
+
+
+def pinned(name):
+    """(address, sha256) of one file catalogs.lock pins."""
+    for line in read_text(os.path.join(ROOT, "catalogs.lock")).splitlines():
+        if line.strip() and not line.startswith("#") and line.split()[0] == name:
+            return line.split()[1], line.split()[2]
+    return None, None
+
+
+def crosswalk(mapping, name):
+    """{control id: [elements]} from one pinned crosswalk: what its publisher relates to each control, and to
+    that control alone. An enhancement's row is its own, never its base control's."""
+    if name in _CROSSWALKS:
+        return _CROSSWALKS[name]
+    z = zipfile.ZipFile(os.path.join(ROOT, ".cache", "catalogs", mapping["crosswalks"][name]["file"]))
+    strings = [html.unescape(re.sub(r"<[^>]+>", "", s))
+               for s in re.findall(r"<si>(.*?)</si>", z.read("xl/sharedStrings.xml").decode("utf-8"), flags=re.S)]
+    out = {}
+    for sheet in sorted(n for n in z.namelist() if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n)):
+        for row in re.findall(r"<row [^>]*>(.*?)</row>", z.read(sheet).decode("utf-8"), flags=re.S):
+            cells = {}
+            for column, attrs, body in re.findall(r'<c r="([A-Z]+)\d+"([^>]*?)(?:/>|>(.*?)</c>)', row, flags=re.S):
+                value = re.search(r"<v>(.*?)</v>", body or "", flags=re.S)
+                if value:
+                    cells[column] = strings[int(value.group(1))] if 't="s"' in attrs else value.group(1)
+            focal = re.fullmatch(r"([A-Z]{2})-(\d+)(?:\((\d+)\))?", cells.get("A", "").strip())
+            if not focal:
+                continue
+            control = f"{focal.group(1).lower()}-{int(focal.group(2))}" + (f".{int(focal.group(3))}" if focal.group(3) else "")
+            element = cells.get("D", "").strip()
+            if re.fullmatch(r"\d+\.\d{5,}", element):  # a clause number the spreadsheet kept as a float: 4.0999999999999996
+                element = repr(round(float(element), 2))
+            out.setdefault(control, [])
+            if element and element not in out[control]:
+                out[control].append(element)
+    _CROSSWALKS[name] = out
+    return out
 
 
 def catalog_facts(mapping):
@@ -307,6 +347,15 @@ def documents(mapping, cloud, r, verdict, facts):
                     "description": "NIST's own OSCAL catalog, pinned by commit and sha256 in catalogs.lock.",
                     "rlinks": [{"href": catalog_href, "media-type": "application/oscal+json"}]},
     }
+    related = []
+    for name, cw in mapping.get("crosswalks", {}).items():
+        href, digest_of = pinned(cw["file"])
+        related.append({"uuid": u(f"resource/crosswalk/{name}"), "title": f"Crosswalk to {cw['title']}",
+                        "description": (f"{cw['by']}. The findings name what it relates to each control, as props "
+                                        f"\"related-{name}\". It relates two documents: it is not a finding, and it "
+                                        "says nothing about a system."),
+                        "rlinks": [{"href": href, "hashes": [{"algorithm": "SHA-256", "value": digest_of}]},
+                                   {"href": cw["page"]}]})
     used = [g for g in verdict["checks"] if any(g in c["checks"] for c in controls)]
     plan = {"assessment-plan": {
         "uuid": u("plan"),
@@ -359,7 +408,9 @@ def documents(mapping, cloud, r, verdict, facts):
                             f"refusal(s) of a violation tried in this run, beside "
                             f"{len(lines) - len(refused)} line(s) that had to hold."),
             "props": [prop("control", c["control"]), prop("cloud", cloud), prop("page-row", c["page_row"]),
-                      prop("catalog-title", titles[c["control"]]), prop("judged-by", "scripts/pack.py")],
+                      prop("catalog-title", titles[c["control"]]), prop("judged-by", "scripts/pack.py")]
+                     + [prop(f"related-{name}", element) for name, elements in v.get("related", {}).items()
+                        for element in (elements or ["none"])],
             "target": {"type": "statement-id", "target-id": smt[c["control"]],
                        "status": {"state": v["state"], "reason": "pass" if v["state"] == "satisfied" else "fail"}},
             "related-observations": [{"observation-uuid": by_line[l]["uuid"]} for l in dict.fromkeys(lines)],
@@ -383,7 +434,7 @@ def documents(mapping, cloud, r, verdict, facts):
             "reviewed-controls": selection, "observations": observations, "findings": findings,
         }],
         "back-matter": {"resources": [resources["run"], resources["artifact"], resources["page"],
-                                      resources["catalog"]]},
+                                      resources["catalog"]] + related},
     }}
     return plan, results
 
@@ -424,6 +475,11 @@ def summary(mapping, cloud, r, verdict):
         text += ["", "Beside it, what had to hold, so a refusal is not the environment refusing everything:", ""]
         text += [f"- {l}" for l in lines_of(c, ["control", "gate"])] or ["- none"]
         text += ["", f"What this leaves out: {' '.join(c['not_covered'].split())}"]
+        for name, elements in v.get("related", {}).items():
+            cw = mapping["crosswalks"][name]
+            text += ["", (f"Related in {cw['title']}: {', '.join(elements)}." if elements else
+                          f"Related in {cw['title']}: nothing.")
+                     + f" This is {cw['by']}, a relation between two documents and not a finding."]
     away = [c["name"] for c in mapping["controls"] if cloud not in c["clouds"]]
     if away:
         text += ["", "## Not in this pack", "",
@@ -462,6 +518,8 @@ def render(mapping, run_dir):
         raise Refused("; ".join(reasons))
     member, member_sha, checks, measured = results_of(r["archive"])
     verdict = judge(mapping, cloud, checks, r["plants"])
+    for control, v in verdict["controls"].items():
+        v["related"] = {name: crosswalk(mapping, name).get(control, []) for name in mapping.get("crosswalks", {})}
     verdict = {"cloud": cloud, "run": r["run"], "artifact": r["artifact"],
                "results_file": {"member": member, "sha256": member_sha},
                "mapping_version": mapping["version"], **verdict, "measured": measured}

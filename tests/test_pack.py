@@ -361,12 +361,28 @@ class Documents(Case):
             for f in result["findings"]:
                 self.assertTrue({o["observation-uuid"] for o in f["related-observations"]} <= uuids)
 
+    def test_related_criteria_are_the_crosswalks_and_that_controls_alone(self):
+        # NIST relates A.8.12 to SC-7(10) and A.8.11 to AC-4(23): neither is SC-7's or AC-4's.
+        want = {"sc-7": ["A.5.14", "A.8.16", "A.8.20", "A.8.22", "A.8.23"], "sc-7.5": [],
+                "ac-4": ["A.5.14", "A.8.22", "A.8.23"], "si-7": [], "sr-4": ["A.5.21", "A.8.30"], "sr-11": []}
+        files = pack.render(MAPPING, os.path.join(RUNS, AWS))
+        verdict = json.loads(files["verdict.json"])
+        self.assertEqual({c: v["related"]["iso-27001-2022"] for c, v in verdict["controls"].items()}, want)
+        doc = json.loads(files["assessment-results.json"])["assessment-results"]
+        for f in doc["results"][0]["findings"]:
+            control = next(p["value"] for p in f["props"] if p["name"] == "control")
+            named = [p["value"] for p in f["props"] if p["name"] == "related-iso-27001-2022"]
+            self.assertEqual(named, want[control] or ["none"], control)
+        hashes = [h["value"] for res in doc["back-matter"]["resources"] if res["title"].startswith("Crosswalk")
+                  for l in res["rlinks"] for h in l.get("hashes", [])]
+        self.assertEqual(hashes, ["e631de234a1fac057991773f015c221226940540f5602e1b70a3768eaff5cbd9"])
+
     def test_the_artifacts_hash_is_the_files(self):
         d = os.path.join(RUNS, AKS)
         r = pack.read_run(d)
         doc = json.loads(pack.render(MAPPING, d)["assessment-results.json"])["assessment-results"]
-        hashes = [h["value"] for res in doc["back-matter"]["resources"] for l in res["rlinks"]
-                  for h in l.get("hashes", [])]
+        hashes = [h["value"] for res in doc["back-matter"]["resources"] if not res["title"].startswith("Crosswalk")
+                  for l in res["rlinks"] for h in l.get("hashes", [])]
         self.assertEqual(set(hashes), {pack.sha256(r["archive"])})
         self.assertEqual(len(hashes), 2)
 

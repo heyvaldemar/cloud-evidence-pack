@@ -106,6 +106,18 @@ def problems(mapping, smt, flagship=FLAGSHIP):
                 bad.append(f"control {cid} on {cloud}: nothing there had to succeed beside the refusals")
     for name in sorted(set(checks) - used):
         bad.append(f"check {name}: no control names it")
+    for name, cw in mapping.get("crosswalks", {}).items():
+        if pack.pinned(cw.get("file"))[0] is None:
+            bad.append(f"crosswalk {name}: catalogs.lock does not pin {cw.get('file')}")
+            continue
+        try:
+            listed = pack.crosswalk(mapping, name)
+        except (OSError, KeyError, ValueError) as e:
+            bad.append(f"crosswalk {name}: {cw['file']} cannot be read: {e}")
+            continue
+        for c in mapping["controls"]:
+            if c["control"] not in listed:
+                bad.append(f"crosswalk {name}: it has no row for {c['control']}, so nothing can be said of what it relates")
     return bad
 
 
@@ -119,6 +131,8 @@ def definition(mapping, catalog_href):
     requirements = []
     for c in mapping["controls"]:
         props = [pack.prop("page-row", c["page_row"])] + [pack.prop("cloud", cloud) for cloud in c["clouds"]]
+        props += [pack.prop(f"related-{name}", element) for name in mapping.get("crosswalks", {})
+                  for element in (pack.crosswalk(mapping, name).get(c["control"]) or ["none"])]
         props += [pack.prop(mapping["checks"][g]["kind"], g) for g in c["checks"]]
         requirements.append({"uuid": u(f"requirement/{c['control']}"), "control-id": c["control"],
                              "description": " ".join(c["implementation"].split()), "props": props,

@@ -31,6 +31,31 @@
                     "value": "aks"
                   },
                   {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.5.14"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.16"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.20"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.22"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.23"
+                  },
+                  {
                     "name": "refusal",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "pod-egress-tcp"
@@ -119,6 +144,11 @@
                     "value": "aks"
                   },
                   {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "none"
+                  },
+                  {
                     "name": "refusal",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "pod-egress-tcp"
@@ -197,6 +227,21 @@
                     "value": "gke"
                   },
                   {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.5.14"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.22"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.23"
+                  },
+                  {
                     "name": "refusal",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "gateway-around"
@@ -245,6 +290,11 @@
                     "value": "gke"
                   },
                   {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "none"
+                  },
+                  {
                     "name": "refusal",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "bundle-tampered"
@@ -288,6 +338,16 @@
                     "value": "gke"
                   },
                   {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.5.21"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.30"
+                  },
+                  {
                     "name": "refusal",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "model-nobom"
@@ -319,6 +379,11 @@
                     "name": "cloud",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "gke"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "none"
                   },
                   {
                     "name": "refusal",

@@ -23,14 +23,14 @@ The AWS run is the last scheduled one that passed: the two after it, [4084561921
 
 Six controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things are true: the flagship's own page, [`docs/compliance.md`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/v1.9.0/docs/compliance.md), has the row; the check that row names writes a line into the cloud run's results; and the run shows a violation that check refused. [`mapping/controls.yaml`](mapping/controls.yaml) has every line in full.
 
-| Control | Where | The violation tried in the run, and refused | Beside it, what had to work |
-|---|---|---|---|
-| SC-7 Boundary Protection | AWS, Google Cloud, Azure | A pod and the node each try 1.1.1.1:443, 8.8.8.8:53 and 151.101.0.81:443, a public name, and a public resolver asked directly | A pod starts from the run's own registry by digest; the registry's name resolves to a private address and answers on 443 |
-| SC-7(5) Deny by Default, Allow by Exception | AWS, Google Cloud, Azure | The same attempts | Each exception answering: the registry through its private way in |
-| AC-4 Information Flow Enforcement | AWS, Google Cloud | With the gateway's pod killed, the model server reached directly | The gateway answers; the harness's own email arrives; no email delivered outside the company's domain |
-| SI-7 Software, Firmware, and Information Integrity | AWS, Google Cloud | The signed bundle with one byte changed; a model named by tag | The registry held nothing before, and exactly what the bundle carried after |
-| SR-4 Provenance | AWS, Google Cloud | A signed model with no AI-BOM | The signed model with its AI-BOM is admitted |
-| SR-11 Component Authenticity | AWS, Google Cloud | Weights nobody signed, weights another key signed, weights from another path, an image the bundle never carried, an image by tag | The signed model is admitted; every running pod runs carried images |
+| Control | Where | The violation tried in the run, and refused | Beside it, what had to work | Related in ISO/IEC 27001:2022, by NIST's crosswalk |
+|---|---|---|---|---|
+| SC-7 Boundary Protection | AWS, Google Cloud, Azure | A pod and the node each try 1.1.1.1:443, 8.8.8.8:53 and 151.101.0.81:443, a public name, and a public resolver asked directly | A pod starts from the run's own registry by digest; the registry's name resolves to a private address and answers on 443 | A.5.14, A.8.16, A.8.20, A.8.22, A.8.23 |
+| SC-7(5) Deny by Default, Allow by Exception | AWS, Google Cloud, Azure | The same attempts | Each exception answering: the registry through its private way in | nothing |
+| AC-4 Information Flow Enforcement | AWS, Google Cloud | With the gateway's pod killed, the model server reached directly | The gateway answers; the harness's own email arrives; no email delivered outside the company's domain | A.5.14, A.8.22, A.8.23 |
+| SI-7 Software, Firmware, and Information Integrity | AWS, Google Cloud | The signed bundle with one byte changed; a model named by tag | The registry held nothing before, and exactly what the bundle carried after | nothing |
+| SR-4 Provenance | AWS, Google Cloud | A signed model with no AI-BOM | The signed model with its AI-BOM is admitted | A.5.21, A.8.30 |
+| SR-11 Component Authenticity | AWS, Google Cloud | Weights nobody signed, weights another key signed, weights from another path, an image the bundle never carried, an image by tag | The signed model is admitted; every running pod runs carried images | nothing |
 
 Azure has two controls because its run makes the boundary alone: no agent and no admission policies are installed there, so its results hold none of the other lines.
 
@@ -39,6 +39,14 @@ Each cloud's DNS check has also failed once, by hand, with the resolver's policy
 **Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks, which no scheduled cloud run that passed has run yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate.
 
 **What every row leaves out** is in the pack beside the row. In short: the boundary is refused, not monitored, and IPv6 is not tried; an email is held to a domain, not to a person; integrity is checked on the way in and not between runs; provenance is a record that is there and signed, not a record shown to be true; authenticity is checked against a key with no transparency log.
+
+## Other frameworks
+
+A related criterion stands beside a finding. It is never a finding.
+
+**ISO/IEC 27001:2022.** The last column above is NIST's own crosswalk from SP 800-53 Rev. 5, [OLIR informative reference 155](https://csrc.nist.gov/projects/olir/informative-reference-catalog/details?referenceId=155), version 1.0.0, posted 2023-11-13. It is read from the spreadsheet NIST serves, pinned by sha256 in [`catalogs.lock`](catalogs.lock), and nothing in it is typed by hand: a pack names what NIST relates to a control, and to that control alone. NIST relates A.8.12 to SC-7(10) and not to SC-7, so it is not in SC-7's row. Where NIST relates nothing, as for SC-7(5), SI-7 and SR-11, the pack says "nothing". A crosswalk relates two documents: NIST's page warns against reading its rows as equivalence, and nothing here is a finding about ISO/IEC 27001. One thing met on the way: NIST's page prints the file's hash under the label SHA3-256, and the value is the file's SHA-256.
+
+**SOC 2.** Not in a pack. AICPA publishes its own mapping of the Trust Services Criteria to NIST 800-53, behind a download button on its site beside a log-in, with no address a build can fetch and pin by hash. A SOC 2 column typed in by hand from it would be what this repository does not do. It can be added the day the file can be pinned as NIST's is.
 
 ## How a pack is made
 
@@ -176,7 +184,7 @@ Runner time on GitHub's hosted runners, and nothing else: no cloud account, no s
 |---|---|
 | `mapping/controls.yaml` | The mapping, written for a person: each control, the lines of a run that carry it, what it leaves out |
 | `oscal/component-definition.json` | The same mapping as an OSCAL component definition, made by `scripts/component.py` |
-| `flagship.lock`, `catalogs.lock`, `tools.lock`, `requirements.lock` | What is fetched, and the hash it must have |
+| `flagship.lock`, `catalogs.lock`, `tools.lock`, `requirements.lock` | What is fetched, and the hash it must have: the flagship's release, NIST's catalog and its crosswalk, the tools, trestle |
 | `scripts/fetch.py`, `pack.py`, `gate.py` | Read a run, build its pack, judge it |
 | `scripts/index.py` | Every scheduled run of each cloud, and what became of it |
 | `scripts/plant.py`, `mutate.py`, `validate.sh` | The plants, the rules switched off in turn, the static checks |

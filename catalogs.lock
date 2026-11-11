@@ -4,5 +4,11 @@
 # differs. Every finding names the catalog's own statement id, and
 # scripts/component.py checks that every control the mapping names is in it.
 #
-# file  url-at-commit  sha256
+# And NIST's own crosswalk from SP 800-53 Rev. 5 to ISO/IEC 27001:2022, the
+# file its OLIR catalog serves as informative reference 155 (version 1.0.0,
+# posted 2023-11-13). NIST's page prints this file's hash; it is this sha256,
+# under the label SHA3-256.
+#
+# file  url  sha256
 NIST_SP-800-53_rev5_catalog.json https://raw.githubusercontent.com/usnistgov/oscal-content/f0de6d8d8c059d374f15e0ae07508d82e370fc1d/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json 64ca6b4161de51ab6af098a7d101d326f14c95e1abf721396cd8a049e8115eeb
+sp800-53r5-to-iso-27001-mapping-2022-OLIR-2023-10-12-UPDATED.xlsx https://csrc.nist.gov/csrc/media/Projects/olir/documents/submissions/sp800-53r5-to-iso-27001-mapping-2022-OLIR-2023-10-12-UPDATED.xlsx e631de234a1fac057991773f015c221226940540f5602e1b70a3768eaff5cbd9

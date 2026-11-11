@@ -21,7 +21,7 @@ Each check is typed: a refusal, a control that had to succeed, or a gate held to
 
 That gives six controls from the runs that exist: SC-7 and SC-7(5) on three clouds; AC-4, SI-7, SR-4 and SR-11 on AWS and Google Cloud. AU-2 and CM-7 wait for a violation shown in a scheduled run; AC-6 and IA-9 for the Vault checks in one; SC-7(10), SC-8, AU-9 and RA-5 have nothing in a cloud run.
 
-Another framework is a column of related criteria, never a finding, and only from the framework owner's or NIST's own crosswalk, fetched and pinned by sha256.
+Another framework is a column of related criteria, never a finding, and only from the framework owner's or NIST's own crosswalk, fetched and pinned by sha256 and read as it is. ISO/IEC 27001:2022 comes from NIST's crosswalk, OLIR informative reference 155: it relates Annex A controls to SC-7, AC-4 and SR-4 and nothing to SC-7(5), SI-7 and SR-11, and a pack says exactly that. SOC 2 is left out until AICPA's own mapping can be fetched and pinned by a build.
 
 ## Consequences
 
