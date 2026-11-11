@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""plant.py DIR PLANT - break one run's files on purpose, so the gate can be shown it.
+
+DIR holds a run as scripts/fetch.py wrote it: a fetched run, or the run/
+inside a pack. Two families of plants.
+
+The run did something else. The results inside the artifact are rewritten
+and the artifact's record is made to agree, as if the run itself had written
+them, so only the control's own rule can catch it:
+
+  missing:<control>       every refusal line the control rests on is gone
+  failed:<control>        one of its refusal lines says the violation got in
+  uncontrolled:<control>  every line that had to succeed beside them is gone
+  renamed:<check>         the flagship renamed one line the mapping names
+
+The file is not that run's. The record or the file is changed and nothing is
+made to agree:
+
+  forged-results    one check inside the artifact flipped, the digest left as it was
+  by-hand           the run was started by workflow_dispatch
+  branch            the run was on another branch
+  other-workflow    the run was the kind e2e's, not a cloud's
+  other-repository  the run was a fork's
+  red-run           the run failed
+  other-run         the artifact belongs to another run
+  no-artifact       the run kept no artifact
+
+A pack edited after it was built. DIR is a pack's evidence directory:
+
+  forged-findings   every finding that says not-satisfied is made to say
+                    satisfied; the documents still parse
+
+  plant.py all CLOUD   every plant that applies to that cloud, one a line
+  plant.py first DIR   the first control mapped on the cloud of the run in DIR
+"""
+import io
+import json
+import os
+import sys
+import zipfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pack  # noqa: E402
+
+PROVENANCE = {
+    "forged-results": "it is not the run's file",
+    "by-hand": "not by the schedule",
+    "branch": "a run on ",
+    "other-workflow": "which is no cloud's workflow",
+    "other-repository": "a run of ",
+    "red-run": "not a run that passed",
+    "other-run": "the artifact is run ",
+    "no-artifact": "the run kept no artifact",
+}
+CONTROL_PLANTS = ("missing", "failed", "uncontrolled")
+
+
+def checks_on(mapping, cloud, control):
+    return [g for g in control["checks"] if cloud in mapping["checks"][g]["clouds"]]
+
+
+def broken(mapping, cloud, plant):
+    """(the checks a plant breaks, the controls that must then be not satisfied) on one cloud."""
+    kind, _, what = plant.partition(":")
+    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+    if kind in CONTROL_PLANTS:
+        c = next((c for c in controls if c["control"] == what), None)
+        if c is None:
+            raise SystemExit(f"plant {plant}: {what} is not mapped on {cloud}")
+        want = "control" if kind == "uncontrolled" else "refusal"
+        groups = [g for g in checks_on(mapping, cloud, c) if mapping["checks"][g]["kind"] == want]
+        groups = groups[:1] if kind == "failed" else groups
+    elif kind == "renamed" and cloud in mapping["checks"].get(what, {}).get("clouds", []):
+        groups = [what]
+    else:
+        raise SystemExit(f"unknown plant {plant} on {cloud}")
+    return groups, {c["control"] for c in controls if set(groups) & set(checks_on(mapping, cloud, c))}
+
+
+def every(mapping, cloud):
+    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+    used = dict.fromkeys(g for c in controls for g in checks_on(mapping, cloud, c))
+    return ([f"{k}:{c['control']}" for c in controls for k in CONTROL_PLANTS] + [f"renamed:{g}" for g in used]
+            + list(PROVENANCE) + ["forged-findings"])
+
+
+def rewrite_results(directory, artifact, change, agree):
+    """The artifact with its e2e-results.json changed; with agree, its record made to match the new file."""
+    path = os.path.join(directory, artifact["name"] + ".zip")
+    with open(path, "rb") as f:
+        old = zipfile.ZipFile(io.BytesIO(f.read()))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as new:
+        for name in old.namelist():
+            body = old.read(name)
+            if name.rsplit("/", 1)[-1] == "e2e-results.json":
+                doc = json.loads(body)
+                change(doc)
+                body = (json.dumps(doc, indent=1) + "\n").encode()
+            new.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), body)
+    with open(path, "wb") as f:
+        f.write(out.getvalue())
+    if agree:
+        artifact["digest"], artifact["size_in_bytes"] = "sha256:" + pack.sha256(out.getvalue()), len(out.getvalue())
+
+
+def forge(evidence):
+    path = os.path.join(evidence, "assessment-results.json")
+    text = pack.read_text(path)
+    if '"state": "not-satisfied"' not in text:
+        raise SystemExit("plant forged-findings: the pack has no finding short of satisfied to edit")
+    for old, new in (('"state": "not-satisfied"', '"state": "satisfied"'), ('"reason": "fail"', '"reason": "pass"'),
+                     (': not-satisfied"', ': satisfied"')):
+        text = text.replace(old, new)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def apply(mapping, directory, plant):
+    if plant == "forged-findings":
+        return forge(directory)
+    r = pack.read_run(directory)
+    run, artifact = r["run"], r["artifact"]
+    cloud = pack.cloud_of(mapping, run)
+    kind = plant.partition(":")[0]
+    if kind in CONTROL_PLANTS + ("renamed",):
+        groups, _ = broken(mapping, cloud, plant)
+        _, _, checks, _ = pack.results_of(r["archive"])
+        lines = [l for g in groups for l in pack.match(mapping["checks"][g], checks, r["plants"], cloud)[0]]
+        names = [c["name"] for c in lines]
+        if not names:
+            raise SystemExit(f"plant {plant}: the run has none of the lines it breaks")
+
+        def change(doc):
+            if kind == "failed":
+                next(c for c in doc["checks"] if c["name"] == names[0])["passed"] = False
+            elif kind == "renamed":
+                next(c for c in doc["checks"] if c["name"] == names[0])["name"] += ", as the next release words it"
+            else:
+                doc["checks"] = [c for c in doc["checks"] if c["name"] not in names]
+
+        rewrite_results(directory, artifact, change, agree=True)
+    elif plant == "forged-results":
+        def flip(doc):
+            doc["checks"][0]["passed"] = not doc["checks"][0]["passed"]
+        rewrite_results(directory, artifact, flip, agree=False)
+    elif plant == "by-hand":
+        run["event"] = "workflow_dispatch"
+    elif plant == "branch":
+        run["head_branch"] = "gpu-capacity"
+    elif plant == "other-workflow":
+        run["path"] = ".github/workflows/e2e.yml"
+    elif plant == "other-repository":
+        run["repository"] = run["head_repository"] = "someone/kubernetes-air-gapped-ai-agent"
+    elif plant == "red-run":
+        run["conclusion"] = "failure"
+    elif plant == "other-run":
+        artifact["run_id"] = run["id"] + 1
+    elif plant == "no-artifact":
+        os.remove(os.path.join(directory, artifact["name"] + ".zip"))
+        os.remove(os.path.join(directory, "artifact.json"))
+        artifact = None
+    else:
+        raise SystemExit(f"unknown plant {plant}")
+    for name, doc in (("run.json", run), ("artifact.json", artifact)):
+        if doc is not None:
+            with open(os.path.join(directory, name), "w") as f:
+                json.dump(doc, f, indent=1, sort_keys=True)
+                f.write("\n")
+
+
+def main(argv):
+    mapping = pack.load_mapping()
+    if len(argv) == 2 and argv[0] == "all" and argv[1] in mapping["clouds"]:
+        print("\n".join(every(mapping, argv[1])))
+        return 0
+    if len(argv) == 2 and argv[0] == "first" and os.path.isdir(argv[1]):
+        cloud = pack.cloud_of(mapping, pack.read_run(argv[1])["run"])
+        print(next(c["control"] for c in mapping["controls"] if cloud in c["clouds"]))
+        return 0
+    if len(argv) != 2 or not os.path.isdir(argv[0]):
+        sys.stderr.write(__doc__)
+        return 2
+    apply(mapping, argv[0], argv[1])
+    print(f"== planted {argv[1]} in {argv[0]}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

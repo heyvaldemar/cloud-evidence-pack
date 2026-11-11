@@ -1,0 +1,414 @@
+{
+  "component-definition": {
+    "components": [
+      {
+        "control-implementations": [
+          {
+            "description": "The rows of docs/compliance.md that a scheduled cloud run gives evidence for, each with the lines of the run that carry it.",
+            "implemented-requirements": [
+              {
+                "control-id": "sc-7",
+                "description": "The cluster's network has no route to the internet and its resolver answers for the cloud's own names and nothing else. The run tries the ways out from a pod and from the node, by address and by name, and each refusal stands beside a connection that had to work.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "SC-7 Boundary Protection"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aks"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-egress-tcp"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-egress-tcp"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-dns-outside"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-dns-outside"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-dns-direct"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-dns-direct"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-other-door"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vendor-registry"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-start"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "cluster-dns"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-dns"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-tcp"
+                  }
+                ],
+                "remarks": "What this leaves out: Control, not monitoring: an attempt to leave is refused, and nothing this run reads records it. IPv6 is not tried. The attempts are a pod's and the node's; the cloud's own control plane, and the runner's address that the cluster's API answers, are outside what is tried.",
+                "uuid": "bfcf5901-9f75-546c-90cd-1d7c0bad99e4"
+              },
+              {
+                "control-id": "sc-7.5",
+                "description": "Everything out is refused, and the exceptions are the private ways in the cluster needs: the run's own registry by a private address, on 443, by digest. The run shows both halves, the refusals and each exception answering.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "SC-7 Boundary Protection"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aks"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-egress-tcp"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-egress-tcp"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-dns-outside"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-dns-outside"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-dns-direct"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "node-dns-direct"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pod-other-door"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vendor-registry"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-start"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-dns"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-tcp"
+                  }
+                ],
+                "remarks": "What this leaves out: The run checks that the exceptions answer, not that they are the only ones: the cloud's other private endpoints the node needs to join are not listed here one by one. Reviewing the exceptions is a person's work.",
+                "uuid": "dcf384f2-a078-5cd8-8a11-b5999cd812a5"
+              },
+              {
+                "control-id": "ac-4",
+                "description": "A model is reached only through the gateway, and data leaves only through a tool whose schema holds an email's recipient to the company's domain. The run kills the gateway's pod and tries the model server directly, and runs the agent through tasks with instructions planted in what it reads.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "AC-4 Information Flow Enforcement"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gateway-around"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gateway-answers"
+                  },
+                  {
+                    "name": "gate",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "outside-email"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "control-email"
+                  },
+                  {
+                    "name": "gate",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gateway-every-request"
+                  }
+                ],
+                "remarks": "What this leaves out: The schema holds a domain, not a person: emails to colleagues nobody named are counted, not refused, and nothing reads what a body carries. In a run where the model never writes an outside address, the email gate shows the outcome and not a refusal; the refusal this control rests on here is the way around the gateway.",
+                "uuid": "0fda7a36-12b2-51f7-be6e-90956bfae365"
+              },
+              {
+                "control-id": "si-7",
+                "description": "Everything the cluster runs crosses in one signed file whose checksums are verified before anything is loaded, and a model is named by digest, so a changed image is a different name.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "SI-7 Software, Firmware, and Information Integrity"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "bundle-tampered"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-by-tag"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-empty"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "registry-exact"
+                  }
+                ],
+                "remarks": "What this leaves out: Checked on the way in. Nothing re-verifies what the registry stores between runs, and the cloud's node image arrives outside the bundle.",
+                "uuid": "4c2f8e92-9046-51b9-91c2-c98b209aaaf5"
+              },
+              {
+                "control-id": "sr-4",
+                "description": "A model is mounted only with an AI-BOM attested with the operator's key that pins it by publisher, revision and sha256.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "SR-4 Provenance"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-nobom"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-signed"
+                  }
+                ],
+                "remarks": "What this leaves out: Admission checks that the record is there and signed, not that it is true of the source. Where the training data came from is not recorded. Container images get no provenance check here.",
+                "uuid": "1bed3745-1d77-50be-ad29-1e334535951d"
+              },
+              {
+                "control-id": "sr-11",
+                "description": "The model is signed with the operator's key and verified at admission with no network; model weights come only from the registry's models path; every pod's images are held to the digests the signed bundle carried.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "SR-11 Component Authenticity"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-unsigned"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-stranger"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "volume-elsewhere"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "image-not-carried"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "image-by-tag"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "bundle-tampered"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "model-signed"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "pods-carried"
+                  }
+                ],
+                "remarks": "What this leaves out: Checked against a key, with no certificate and no transparency log. Part (b), reporting a counterfeit to anyone, is a process and nothing here does it. The images of the cloud's own node are exempt.",
+                "uuid": "dda98692-7cb7-5c82-857c-c0b840a080c8"
+              }
+            ],
+            "source": "https://raw.githubusercontent.com/usnistgov/oscal-content/f0de6d8d8c059d374f15e0ae07508d82e370fc1d/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+            "uuid": "d79fcb6b-2252-528c-a583-190bc5742586"
+          }
+        ],
+        "description": "heyvaldemar/kubernetes-air-gapped-ai-agent, as its scheduled runs make it on AWS, Google Cloud, Azure: the cluster, the boundary around it, and what is inside.",
+        "props": [
+          {
+            "name": "repository",
+            "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+            "value": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent"
+          },
+          {
+            "name": "page",
+            "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+            "value": "docs/compliance.md"
+          },
+          {
+            "name": "workflow",
+            "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+            "value": ".github/workflows/aws.yml"
+          },
+          {
+            "name": "workflow",
+            "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+            "value": ".github/workflows/gke.yml"
+          },
+          {
+            "name": "workflow",
+            "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+            "value": ".github/workflows/aks.yml"
+          }
+        ],
+        "title": "kubernetes-air-gapped-ai-agent",
+        "type": "software",
+        "uuid": "db413014-84b2-5509-a8cd-dd984192e2d9"
+      }
+    ],
+    "metadata": {
+      "last-modified": "2026-11-11T00:00:00+00:00",
+      "oscal-version": "1.2.1",
+      "remarks": "Made from mapping/controls.yaml by scripts/component.py. A control is here only where the flagship's own page has the row and a scheduled cloud run shows a violation its check refused. It is not a statement that a system meets a framework.",
+      "title": "kubernetes-air-gapped-ai-agent on its scheduled cloud runs, mapped to NIST SP 800-53 Rev. 5.2.0",
+      "version": "1.0.0"
+    },
+    "uuid": "f1e60162-dd81-501c-8ff7-27974f2b0aa0"
+  }
+}

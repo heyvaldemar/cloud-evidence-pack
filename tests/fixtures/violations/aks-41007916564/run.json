@@ -1,0 +1,18 @@
+{
+ "conclusion": "failure",
+ "created_at": "2026-10-30T05:20:43Z",
+ "event": "workflow_dispatch",
+ "head_branch": "main",
+ "head_repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "head_sha": "08dd139bef6ffc03ad0cadae2fefa87e38b49ab1",
+ "html_url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41007916564",
+ "id": 41007916564,
+ "name": "The boundary on AKS",
+ "path": ".github/workflows/aks.yml",
+ "repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "run_attempt": 1,
+ "run_number": 5,
+ "run_started_at": "2026-10-30T05:20:43Z",
+ "status": "completed",
+ "updated_at": "2026-10-30T05:41:37Z"
+}

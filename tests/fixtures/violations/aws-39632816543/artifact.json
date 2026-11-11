@@ -1,0 +1,11 @@
+{
+ "created_at": "2026-10-21T16:27:02Z",
+ "digest": "sha256:5c8cf47f1428865530120b649e79266952b7e0aae8af354f38743d25d736db67",
+ "expires_at": "2027-01-19T16:13:19Z",
+ "head_sha": "860e2f772f7e982dcd3da675bb25be217a133ba6",
+ "id": 12360632984,
+ "name": "e2e-results-aws",
+ "run_id": 39632816543,
+ "size_in_bytes": 648,
+ "url": "https://api.github.com/repos/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/artifacts/12360632984"
+}

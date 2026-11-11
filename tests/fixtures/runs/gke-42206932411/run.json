@@ -1,0 +1,18 @@
+{
+ "conclusion": "success",
+ "created_at": "2026-11-06T11:00:23Z",
+ "event": "schedule",
+ "head_branch": "main",
+ "head_repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "head_sha": "473fa4a5e9761f49c6557b9292ccecc7d0aa5d48",
+ "html_url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411",
+ "id": 42206932411,
+ "name": "The boundary on GKE",
+ "path": ".github/workflows/gke.yml",
+ "repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "run_attempt": 1,
+ "run_number": 17,
+ "run_started_at": "2026-11-06T11:00:23Z",
+ "status": "completed",
+ "updated_at": "2026-11-06T11:41:53Z"
+}

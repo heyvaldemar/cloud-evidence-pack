@@ -1,0 +1,15 @@
+# The system whose scheduled cloud runs this repository turns into evidence:
+# heyvaldemar/kubernetes-air-gapped-ai-agent. Its page of controls,
+# docs/compliance.md, is what every control in mapping/controls.yaml is a row
+# of, and it is read from this release's signed source archive, never from a
+# branch. scripts/flagship.sh refuses the archive unless all three hold: its
+# sha256 is the one below, cosign verifies its keyless signature as made by
+# the flagship's release workflow on this tag, and slsa-verifier verifies
+# its SLSA provenance for this tag.
+#
+# The runs themselves are read at their own commits, whatever release was
+# newest that week: scripts/fetch.py takes the planted pods from the commit
+# the run was made from.
+#
+# repository  tag  sha256-of-the-source-archive
+heyvaldemar/kubernetes-air-gapped-ai-agent v1.9.0 623da314d0e2c13a29bc85ef60cdf5ab975f542f3342448721e898fc6e29cb4d

@@ -1,0 +1,8 @@
+# NIST's own OSCAL catalog of SP 800-53 Rev. 5, from
+# github.com/usnistgov/oscal-content, pinned to one commit and to the file's
+# sha256. scripts/catalogs.sh downloads it and refuses a file whose hash
+# differs. Every finding names the catalog's own statement id, and
+# scripts/component.py checks that every control the mapping names is in it.
+#
+# file  url-at-commit  sha256
+NIST_SP-800-53_rev5_catalog.json https://raw.githubusercontent.com/usnistgov/oscal-content/f0de6d8d8c059d374f15e0ae07508d82e370fc1d/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json 64ca6b4161de51ab6af098a7d101d326f14c95e1abf721396cd8a049e8115eeb
