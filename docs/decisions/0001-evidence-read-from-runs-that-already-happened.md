@@ -18,7 +18,7 @@ It is not a leg of kubernetes-oscal-evidence, for four reasons:
 1. That repository's claim, its `AGENTS.md` and its first decision record are about one run on kind, of admission policies, mapped only onto rows of the published control-to-test matrix. The matrix has no row a network boundary control lands on.
 2. The chain of evidence is another one. There the run that signs is the run that made the evidence. Here the evidence is another repository's run, and what must be shown is whose file it is.
 3. A red week on a cloud must not sit beside that repository's own record. AWS had no GPU capacity on 2026-11-05 and its scheduled run failed.
-4. Packs appear every week, one per cloud run, whether or not the code moved. There a release is the code and the evidence of a run on the tag.
+4. A pack appears for each scheduled cloud run that passes, whether or not the code moved. There a release is the code and the evidence of a run on the tag.
 
 ## Consequences
 
@@ -34,4 +34,4 @@ It is not a leg of kubernetes-oscal-evidence, for four reasons:
 
 ## How to explain this to a customer
 
-Every week the reference is built on real cloud accounts, tried from inside, and destroyed. This repository takes the record of each of those runs straight from GitHub and turns it into a standard document. It runs nothing in a cloud itself: it reads what already happened.
+Every week a scheduled run builds the reference on each of three real cloud accounts, tries it from inside and destroys it. Which weeks passed is what the index shows. This repository takes the record of each of those runs straight from GitHub and turns it into a standard document. It runs nothing in a cloud itself: it reads what already happened.
