@@ -1,0 +1,27 @@
+# The static checks of scripts/validate.sh, each shown the violation it exists
+# for (tests/static/plant_violations.py): the file, the text it holds, what it
+# becomes, the check that must then fail, and what the change plants. Fields
+# are JSON-encoded, tab-separated.
+"oscal/component-definition.json"	"\"type\": \"software\""	"\"type\": \"service\""	"component"	"a component definition edited by hand, no longer what the mapping gives"
+"mapping/controls.yaml"	"    checks: [model-nobom, model-signed]\n"	"    checks: [model-nobom, model-attested]\n"	"component"	"a control resting on a check the mapping does not define"
+"mapping/controls.yaml"	"  - control: sr-4\n"	"  - control: sr-44\n"	"component"	"a control NIST's catalog does not have"
+"mapping/controls.yaml"	"    page_row: SR-4 Provenance\n"	"    page_row: SR-4 Chain of Custody\n"	"component"	"a control with no row in the flagship's own page"
+"mapping/controls.yaml"	"plant: model-nobom, says"	"plant: model-without-bom, says"	"component"	"a planted pod the flagship's release does not have"
+"mapping/controls.yaml"	"model-signed: {kind: control,"	"model-signed: {kind: refusal,"	"component"	"the control pod named as a refusal"
+"mapping/controls.yaml"	"    checks: [model-nobom, model-signed]\n"	"    checks: [model-signed]\n"	"component"	"a control with no refusal: no violation is ever shown it"
+"mapping/controls.yaml"	"    checks: [bundle-tampered, model-by-tag, registry-empty, registry-exact]\n"	"    checks: [bundle-tampered, model-by-tag]\n"	"component"	"a control resting on refusals alone"
+"mapping/controls.yaml"	"    line: 'a bundle changed by one byte is refused, and loads nothing'\n"	"    line: 'a bundle changed by one byte (is refused, and loads nothing'\n"	"component"	"a line that is not a regular expression"
+"mapping/controls.yaml"	"    checks: [gateway-around, gateway-answers, outside-email, control-email, gateway-every-request]\n"	"    checks: [gateway-around, gateway-answers, outside-email, control-email]\n"	"component"	"a check no control names"
+"mapping/controls.yaml"	"    page_row: SR-4 Provenance\n    clouds: [aws, gke]\n"	"    page_row: SR-4 Provenance\n    clouds: [aws, gke, aks]\n"	"component"	"a control mapped on a cloud whose run writes none of its lines"
+"mapping/controls.yaml"	"    at_least: {aws: 1, gke: 2, aks: 2}\n    says: A pod asks"	"    at_least: {aws: 1, gke: 2}\n    says: A pod asks"	"component"	"a count of lines that leaves one cloud out"
+"tests/fixtures/runs/aks-42809539539/run.json"	"\"event\": \"schedule\""	"\"event\": \"workflow_dispatch\""	"fixtures"	"a committed run that was started by hand"
+"tests/fixtures/runs/aws-39744285464/artifact.json"	"\"digest\": \"sha256:daa0d901"	"\"digest\": \"sha256:eaa0d901"	"fixtures"	"a committed artifact that is not the file GitHub reported"
+"mapping/controls.yaml"	"      aks: {run: 41007916564, line: 'a pod resolved example\\.com: .+'}\n"	"      aks: {run: 41007916565, line: 'a pod resolved example\\.com: .+'}\n"	"fixtures"	"a run cited as the day a check failed, with no copy of it here"
+"mapping/controls.yaml"	"      aws: {run: 39632816543, line: 'the node resolved example\\.com: .+'}\n"	"      aws: {run: 39632816543, line: 'the node resolved example\\.net: .+'}\n"	"fixtures"	"a cited failure that the cited run does not hold"
+"ci-images.pins"	"SHELLCHECK_IMAGE=koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"	"SHELLCHECK_IMAGE=koalaman/shellcheck:v0.11.0"	"images"	"a CI image by tag only"
+"scripts/pack.py"	"        \"import-ap\": {\"href\": \"assessment-plan.json\"},\n"	""	"trestle"	"assessment results with no plan to import, which is not OSCAL"
+"scripts/pack.py"	"if run.get(\"event\") != \"schedule\":"	"if False:"	"gate"	"the builder's rule on who started the run, switched off"
+"scripts/gate.py"	"        elif states[0][0] != \"satisfied\":"	"        elif False:"	"gate"	"the gate's rule on a finding that is not satisfied, switched off"
+"scripts/pack.py"	"if run.get(\"event\") != \"schedule\":"	"if run.get(\"event\") not in (\"schedule\",):"	"mutations"	"a rule rewritten without its line in tests/plants.tsv"
+"tests/test_pack.py"	"        self.refused(lambda r: r.update(event=\"workflow_dispatch\"), \"not by the schedule\")"	"        pass"	"mutations"	"a test that no longer tries what its rule exists for"
+"scripts/pack.py"	"if artifact.get(\"digest\") != \"sha256:\" + sha256(archive):"	"if False:"	"plants"	"a builder that takes a forged results file, which the plants must show"

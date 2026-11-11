@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""mutate.py - every rule of the builder and the gate switched off in turn, and the tests must notice.
+"""mutate.py - every rule of the builder, the gate and the index switched off in turn, and the tests must notice.
 
 tests/plants.tsv lists one change per line: a file, a piece of it, what it
-becomes, and the test in tests/test_pack.py that must then fail. Each change
+becomes, and the test that must then fail: one of tests/test_pack.py, or of
+another module when the name begins with it (test_index.Leg.test_...). Each change
 is made to a copy of the scripts, never to the scripts themselves; the test
 is run against that copy (SCRIPTS_DIR), and it must fail by an assertion. A
 test that only crashes on the changed script has not judged anything, and
@@ -25,7 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def suite(scripts_dir, test=None):
     cmd = [sys.executable, "-m", "unittest"]
-    cmd += [f"test_pack.{test}"] if test else ["test_pack"]
+    cmd += [test if test.startswith("test_") else f"test_pack.{test}"] if test else ["test_pack", "test_index"]
     env = dict(os.environ, SCRIPTS_DIR=scripts_dir)
     p = subprocess.run(cmd, cwd=os.path.join(ROOT, "tests"), env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr

@@ -14,9 +14,10 @@
 #   images     every container image this repository names is by digest
 #   trestle    compliance-trestle validates the component definition and the
 #              plan and results of a pack built from each committed run
-#   gate       the tests of the builder and the gate (tests/test_pack.py)
-#   mutations  each rule of the builder and the gate switched off in turn,
-#              and the test named for it fails (scripts/mutate.py)
+#   gate       the tests of the builder, the gate and the index
+#              (tests/test_pack.py, tests/test_index.py)
+#   mutations  each of their rules switched off in turn, and the test named
+#              for it fails by an assertion (scripts/mutate.py)
 #   plants     every plant scripts/plant.py knows, on every committed run:
 #              each caught, and for its own reason (tests/e2e/plants.sh)
 #
