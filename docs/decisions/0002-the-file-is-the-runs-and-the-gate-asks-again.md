@@ -19,7 +19,7 @@ A pack built from another repository's run is worth what the link between them i
 
 - A reader checks the file against GitHub, not against the author: two commands, printed at the end of every pack's `summary.md`.
 - GitHub keeps an artifact for 90 days. After that the digest cannot be asked, and what remains is the signature and its entry in Sigstore's log: this repository's workflow, at a named commit, built the pack while the artifact existed.
-- The record and the digest are public; the artifact's zip is not served without a token. Whether this repository's own token may download it is settled by its first workflow run.
+- The record and the digest are public; the artifact's bytes are not served without a token (401 to an anonymous request, 2026-11-11). This repository's own workflow token may download them, though the artifact is another repository's: run 43112673693 built and signed packs for one GKE run and two AKS runs that way. A reader with no account cannot, which is why the flagship signing and keeping its own results is the next step whatever this token can do.
 
 ## Alternatives
 
