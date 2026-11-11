@@ -12,8 +12,9 @@
 #                    the artifact's digest
 #
 # No cluster and no cloud account: the run already happened. Needs Python
-# 3.11 or later with requirements.lock installed, and curl for NIST's
-# catalog the first time.
+# 3.11 or later with requirements.lock installed, and curl, cosign and
+# slsa-verifier (scripts/install-tools.sh) for NIST's catalog and the
+# flagship's release the first time.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -22,6 +23,7 @@ if [ -n "${RUN:-}" ]; then name="run-$RUN"; else name="$(basename "${RUN_DIR:?se
 STATE="$ROOT/.cache/run/$name${PLANT:+-${PLANT//:/-}}"
 rm -rf "$STATE" && mkdir -p "$STATE"
 
+bash scripts/flagship.sh
 bash scripts/catalogs.sh
 python3 scripts/component.py --check
 if [ -n "${RUN:-}" ]; then

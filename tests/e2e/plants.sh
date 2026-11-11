@@ -11,6 +11,8 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT" || exit 1
 LOGS="$ROOT/.cache/plants"
 rm -rf "$LOGS" && mkdir -p "$LOGS"
+# Once, before anything runs side by side: each run then finds both verified.
+bash scripts/flagship.sh >/dev/null || exit 1
 bash scripts/catalogs.sh >/dev/null || exit 1
 
 one() {

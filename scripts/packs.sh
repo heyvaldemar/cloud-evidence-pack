@@ -89,6 +89,7 @@ one() { # one CLOUD RUN_ID [RUN_DIR]
   echo "pack     $(grep -E "^== .* controls satisfied" "$log" | tail -n 1 | sed "s/^== //")"
 }
 
+bash scripts/flagship.sh || exit 2
 bash scripts/catalogs.sh >/dev/null || exit 2
 mkdir -p "$ROOT/.cache/runs/lists"
 for cloud in $(python3 -c 'import sys; sys.path.insert(0, "scripts"); import pack; print(" ".join(pack.load_mapping()["clouds"]))'); do
