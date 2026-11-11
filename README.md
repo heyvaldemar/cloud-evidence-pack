@@ -21,7 +21,7 @@ The AWS run is the last scheduled one that passed: the two after it, [4084561921
 
 ## The controls
 
-Six controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things are true: the flagship's own page, [`docs/compliance.md`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/v1.9.0/docs/compliance.md), has the row; the check that row names writes a line into the cloud run's results; and the run shows a violation that check refused. [`mapping/controls.yaml`](mapping/controls.yaml) has every line in full.
+Six controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things are true: the flagship's own page, [`docs/compliance.md`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/v1.9.0/docs/compliance.md), has the row; the check that row names writes a line into the cloud run's results; and the run shows a violation that check refused. A planted pod counts for a control only when that row of the page names it. [`mapping/controls.yaml`](mapping/controls.yaml) has every line in full.
 
 | Control | Where | The violation tried in the run, and refused | Beside it, what had to work | Related in ISO/IEC 27001:2022, by NIST's crosswalk |
 |---|---|---|---|---|
@@ -36,7 +36,7 @@ Azure has two controls because its run makes the boundary alone: no agent and no
 
 Each cloud's DNS check has also failed once, by hand, with the resolver's policy left off: AWS [39632816543](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39632816543), Google Cloud [40560466605](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40560466605), Azure [41007916564](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41007916564). Copies of those three runs are in [`tests/fixtures/violations`](tests/fixtures/violations), and a static check holds each to the failed line it is cited for.
 
-**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks, which no scheduled cloud run that passed has run yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate.
+**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks, which no scheduled cloud run that passed has run yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate. [kubernetes-oscal-evidence](https://github.com/heyvaldemar/kubernetes-oscal-evidence) dropped it for the same reason in its v1.2.0.
 
 **What every row leaves out** is in the pack beside the row. In short: the boundary is refused, not monitored, and IPv6 is not tried; an email is held to a domain, not to a person; integrity is checked on the way in and not between runs; provenance is a record that is there and signed, not a record shown to be true; authenticity is checked against a key with no transparency log.
 

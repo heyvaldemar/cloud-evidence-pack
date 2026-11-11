@@ -13,7 +13,7 @@ A check line that passes can pass for a bad reason: the probe was dead, the reso
 
 A control is in `mapping/controls.yaml` only when three things are true:
 
-1. the flagship's page has the row, read from the release `flagship.lock` pins;
+1. the flagship's page has the row, read from the release `flagship.lock` pins, and that row names every planted pod the control rests on as a refusal;
 2. the check that row names writes a line into the cloud run's results;
 3. the run shows a violation that check refused, beside something that had to succeed.
 
@@ -26,7 +26,7 @@ Another framework is a column of related criteria, never a finding, and only fro
 ## Consequences
 
 - The pack cannot say more than the page. When a run shows the page wrong, the page is corrected first.
-- The flagship's page says CM-14 is not mapped, because the model is verified against a public key and not a certificate, and puts the signature plants under SR-11. kubernetes-oscal-evidence maps CM-14 and CM-7(5), and rests SR-11 on the carried-images policy alone. This repository follows the page. The two should agree, and which moves is not decided here.
+- The flagship's page says CM-14 is not mapped, because the model is verified against a public key and not a certificate, and puts the signature plants under SR-11. Until 2026-11-11 kubernetes-oscal-evidence mapped CM-14; its v1.2.0 of that day drops it and moves its plants under SR-11, to agree with the page. It also maps CM-7(5) on the carried-images policy. The page has no row for CM-7(5), so it is not mapped here.
 - A line renamed upstream turns its control not satisfied until the mapping follows. That is the intended failure.
 - The first full pass of the plants missed eight, all in the mapping: two patterns that ended in "anything", and two checks that asked for one line where two are written.
 

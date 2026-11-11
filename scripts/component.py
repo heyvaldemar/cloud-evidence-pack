@@ -5,7 +5,8 @@ mapping/controls.yaml is refused when it names anything that is not there:
 
   - a control NIST's pinned catalog does not have, or one with no statement;
   - a control with no row in the flagship's docs/compliance.md, read from the
-    release flagship.lock pins;
+    release flagship.lock pins, or one resting on a planted pod its row there
+    does not name;
   - a check no control names, or a control naming a check that is not defined;
   - a check with no kind, no cloud, a pattern that does not compile, or both
     a line and a plant, or neither;
@@ -85,8 +86,14 @@ def problems(mapping, smt, flagship=FLAGSHIP):
         seen.add(cid)
         if not smt.get(cid):
             bad.append(f"control {cid}: NIST's catalog has no such control, or it has no statement")
-        if not re.search(r"^\| " + re.escape(c["page_row"]), page, re.M):
+        row = re.search(r"^\| " + re.escape(c["page_row"]) + r".*$", page, re.M)
+        if not row:
             bad.append(f"control {cid}: {mapping['flagship']['page']} has no row \"{c['page_row']}\"")
+        for g in c["checks"]:
+            plant = checks.get(g, {}).get("plant")
+            if row and plant and checks[g].get("kind") == "refusal" and f"`{plant}`" not in row.group(0):
+                bad.append(f"control {cid}: its row in {mapping['flagship']['page']} does not name the planted pod "
+                           f"{plant}, so the page does not rest this control on it")
         for field in ("name", "implementation", "not_covered"):
             if not str(c.get(field) or "").strip():
                 bad.append(f"control {cid}: it has no {field}")

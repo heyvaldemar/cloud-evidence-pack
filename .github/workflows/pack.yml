@@ -46,6 +46,10 @@ concurrency:
 jobs:
   checks:
     name: Static checks, and that each can fail
+    # The daily schedule waits until the repository is public: a private
+    # repository pays for its minutes, and a pack nobody can read proves
+    # nothing to anyone. Pushes, pull requests and releases run either way.
+    if: github.event_name != 'schedule' || github.event.repository.private == false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -12,7 +12,7 @@ No cloud workflow is dispatched from here and no cloud resource is made, for any
 
 ## The mapping
 
-A control goes into `mapping/controls.yaml` only when the flagship's `docs/compliance.md` has the row, the check that row names writes a line into the cloud run's results, and the run shows a violation that check refused beside something that had to succeed. Each control says what it leaves out. A line is named to its end: a pattern that ends in "anything" is a pattern a renamed line still matches. `scripts/component.py` refuses a mapping that names a control, a row, a check or a planted pod that does not exist, and `oscal/component-definition.json` is never edited by hand.
+A control goes into `mapping/controls.yaml` only when the flagship's `docs/compliance.md` has the row, the check that row names writes a line into the cloud run's results, and the run shows a violation that check refused beside something that had to succeed. A planted pod counts for a control only when that row of the page names it. Each control says what it leaves out. A line is named to its end: a pattern that ends in "anything" is a pattern a renamed line still matches. `scripts/component.py` refuses a mapping that names a control, a row, a check or a planted pod that does not exist, and `oscal/component-definition.json` is never edited by hand.
 
 ## A check is trusted only after it has failed
 

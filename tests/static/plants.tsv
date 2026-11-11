@@ -26,3 +26,4 @@
 "tests/test_pack.py"	"        self.refused(lambda r: r.update(event=\"workflow_dispatch\"), \"not by the schedule\")"	"        pass"	"mutations"	"a test that no longer tries what its rule exists for"
 "scripts/pack.py"	"if artifact.get(\"digest\") != \"sha256:\" + sha256(archive):"	"if False:"	"plants"	"a builder that takes a forged results file, which the plants must show"
 "mapping/controls.yaml"	"    file: sp800-53r5-to-iso-27001-mapping-2022-OLIR-2023-10-12-UPDATED.xlsx\n"	"    file: sp800-53r5-to-iso-27001-mapping.xlsx\n"	"component"	"a crosswalk that catalogs.lock does not pin"
+"mapping/controls.yaml"	"    checks: [bundle-tampered, model-by-tag, registry-empty, registry-exact]\n"	"    checks: [bundle-tampered, model-by-tag, model-unsigned, registry-empty, registry-exact]\n"	"component"	"a control resting on a planted pod its row of the flagship's page does not name"
