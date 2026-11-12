@@ -250,6 +250,12 @@ jobs:
       base64-subjects: ${{ needs.packs.outputs.subjects }}
       provenance-name: cloud-evidence-packs.intoto.jsonl
       upload-assets: false
+      # The generator stops in a private repository unless it is told the
+      # repository's name may go to Sigstore's public log. It may: the packs'
+      # own keyless signatures put it there since run 43112673693, and the
+      # repository is private only until its first review. It changes nothing
+      # once the repository is public.
+      private-repository: true
 
   attach:
     name: Attach the packs to the release, and verify them as a stranger would
