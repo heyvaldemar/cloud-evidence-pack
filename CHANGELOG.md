@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-12
+
 ### Added
 
 - A scheduled cloud run of heyvaldemar/kubernetes-air-gapped-ai-agent as an OSCAL evidence pack. `scripts/fetch.py` reads, with no token, what the flagship signed and kept on its branch `cloud-results` (its ADR 25): the record of the run, verified by cosign for one exact identity, the `e2e-results-<cloud>` artifact with the sha256 the record names, and the planted pods at the run's commit. `scripts/pack.py` refuses anything but a scheduled run on `main` that passed, with the signed record beside it and everything read being what that record says, then writes an assessment plan and assessment results with compliance-trestle's models: one observation per line of the run the mapping names, verbatim, and one finding per control with NIST's own statement id. The documents are a function of the run and the mapping alone.
