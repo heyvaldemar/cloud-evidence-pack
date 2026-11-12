@@ -21,6 +21,12 @@ three files with no token, and before it writes anything it requires:
   - cosign to verify the record against its bundle for one exact identity,
     the flagship's `.github/workflows/cloud-results.yml` at `refs/heads/main`,
     issued by GitHub Actions. No pattern: one string;
+  - the record to be the one that was asked for. The branch's index.json
+    says where a run is kept and nobody signed it, so a record signed by the
+    flagship is not enough: it must be of that run, of the flagship's
+    repository, and kept where a record of its cloud, run and attempt
+    belongs, <cloud>/<run id>-<attempt>. A record of another run is refused,
+    however well signed;
   - the artifact's sha256 to be the one the signed record names.
 
 Then it writes, for scripts/pack.py:
@@ -42,6 +48,7 @@ GITHUB_TOKEN or GH_TOKEN is set, for the rate limit alone.
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -114,6 +121,10 @@ def fetch_run(mapping, run_id, out):
               file=sys.stderr)
         return 1
     entry = max(kept, key=lambda r: r.get("attempt") or 1)
+    # The index is not signed. Its path is read only as a place on that branch, never as an address.
+    if not re.fullmatch(r"[a-z]+/[0-9]{1,20}-[0-9]{1,4}", str(entry.get("path"))):
+        raise SystemExit(f"fetch: the branch's index keeps run {run_id} under {str(entry.get('path'))[:80]!r}, "
+                         f"which is not <cloud>/<run id>-<attempt>: nothing read")
     raw_record = get(f"{base}/{entry['path']}/record.json")
     raw_bundle = get(f"{base}/{entry['path']}/record.json.sigstore.json")
     os.makedirs(out, exist_ok=True)
@@ -127,6 +138,21 @@ def fetch_run(mapping, run_id, out):
         raise SystemExit(f"fetch: the record of run {run_id} is not signed as {signer(mapping)}: {why}")
     record = json.loads(raw_record)
     run, artifact = record["run"], record.get("artifact")
+    # Signed, and by the flagship. The index said where to look and nobody signed the index, so the record must
+    # also be the one that was asked for.
+    place = f"{record.get('cloud')}/{run.get('id')}-{run.get('run_attempt')}"
+    other = []
+    if str(run.get("id")) != str(run_id):
+        other.append(f"it is the record of run {run.get('id')}")
+    if record.get("repository") != repo:
+        other.append(f"it is a record of {record.get('repository')}")
+    if entry["path"] != place:
+        other.append(f"it is kept under {entry['path']}, and its own place is {place}")
+    if other:
+        for name in ("record.json", "record.json.sigstore.json"):
+            os.remove(os.path.join(out, name))
+        raise SystemExit(f"fetch: the record the branch's index gives for run {run_id} is signed by the flagship, "
+                         f"and is not that run's: {'; '.join(other)}")
     write(os.path.join(out, "run.json"), run)
     write(os.path.join(out, "jobs.json"), record.get("jobs") or [])
     cloud = next((c for c, spec in mapping["clouds"].items() if spec["workflow"] == run.get("path")), None)

@@ -33,3 +33,5 @@
 "scripts/release-verify.sh"	"  if ! sigstore slsa-verifier verify-artifact \"$f\" --provenance-path \"$provenance\" --source-uri \"github.com/$REPO\" --source-tag \"$TAG\"; then"	"  if false; then"	"release"	"a release check that does not ask slsa-verifier"
 "scripts/release-verify.sh"	"if [ \"$packs\" -lt 1 ]; then echo \"FAIL the release holds no pack\"; failed=1; fi"	""	"release"	"a release with no pack, passed"
 "scripts/release-verify.sh"	"--certificate-identity \"https://github.com/$REPO/.github/workflows/pack.yml@refs/tags/$TAG\""	"--certificate-identity-regexp \"^https://github.com/$REPO/\""	"release"	"a pack's signature taken from any workflow and any ref of the repository"
+"scripts/gate.py"	"        refused = None if args.unsigned else signature(mapping, args.evidence)"	"        refused = None"	"plants"	"a gate that, given a pack and no flag, passes a record edited with its run, which the plants must show"
+"scripts/fetch.py"	"    if str(run.get(\"id\")) != str(run_id):"	"    if False:"	"gate"	"the rule that a signed record is of the run that was asked for, switched off"

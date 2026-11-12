@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Changed
+
+- The gate verifies the flagship's signature on the run's record whenever it is given a pack. In 1.0.0 that was done only with `--signed`, and `python3 scripts/gate.py evidence` alone passed a pack whose record and run had been edited alike. `--signed` is still taken and changes nothing; `--unsigned` leaves cosign out, for the tests of the rules below the signature, and the gate's last line then says the signature was not asked for. The `forged-record` plant now also runs the gate with no flag and requires it to refuse the pack for the signature.
+- `scripts/fetch.py` holds the record the branch's index leads to, to the run that was asked for. The index is not signed, so a record signed by the flagship must also be of that run, of the flagship's repository, and kept under `<cloud>/<run id>-<attempt>` as its own cloud, run and attempt give it; an index path of any other shape is not followed. In 1.0.0 a record the flagship had signed for one run was taken for whichever run the index named it for.
+- In `scripts/pack.py` the field that says a Sigstore bundle lies beside the record is `has_bundle`, not `signed`: the builder only requires the bundle to be there, and cosign's verdict is `fetch.py`'s and the gate's.
+
 ### Fixed
 
 - Run 43137012297, the release run of v1.0.0, is red in its last job: after the three packs had verified, the job took the repository's own source archive, which `release-assets.yml` signs as itself, for a fourth pack and failed on its identity. The signatures and the assets of v1.0.0 were not affected: they verify from an empty directory. The check is now a script, `scripts/release-verify.sh`: a pack is an archive named `<cloud>-<run id>` and nothing else, static check `release` runs it on one real pack of v1.0.0 in six cases, and five plants break it one way each.

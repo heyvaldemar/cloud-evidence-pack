@@ -112,7 +112,7 @@ A gate that has never failed proves nothing. [`scripts/plant.py`](scripts/plant.
 | `uncontrolled:<control>` | everything that had to succeed beside the refusals is gone | the same |
 | `renamed:<check>`, one for every check | the flagship renamed one line | the same; never skip it |
 | `forged-results` | one check flipped inside the artifact | refuse the run: the file is not the one the signed record names |
-| `forged-record` | the signed record and the run beside it edited alike, so every rule that reads them agrees | refuse it by the signature: cosign does not verify the record |
+| `forged-record` | the signed record and the run beside it edited alike, so every rule that reads them agrees | refuse it by the signature: cosign does not verify the record, and the gate given the pack and no flag does not pass it |
 | `unsigned`, `no-record`, `record-mismatch` | the signature gone, the record gone, or a run's record that is not the signed one | refuse the run, for that one reason |
 | `forged-findings` | a pack edited to say every control is satisfied, over a violation that got in | fail: the documents are not what the run gives. trestle still reads them |
 | `by-hand`, `branch`, `other-workflow`, `other-repository`, `red-run`, `other-run`, `no-artifact` | a run that is not a scheduled run's own file | refuse it, for that one reason and no other |
@@ -153,14 +153,14 @@ python3 -m venv .venv && .venv/bin/pip install --require-hashes --no-deps -r req
 export PATH="$PWD/.venv/bin:$PATH"
 bash scripts/catalogs.sh
 bash scripts/validate.sh evidence
-python3 scripts/gate.py evidence --signed --live
+python3 scripts/gate.py evidence --live
 ```
 
-`validate.sh` is trestle's validator over the pack's plan and results. `gate.py` builds the documents again from `evidence/run` and compares; with `--signed` it has cosign verify the flagship's signature on the run's record, and with `--live` it also asks GitHub now for the run's record and the artifact's digest. Neither needs a token; `--signed` needs cosign on the PATH.
+`validate.sh` is trestle's validator over the pack's plan and results. `gate.py` builds the documents again from `evidence/run` and compares, and has cosign verify the flagship's signature on the run's record: it does that whenever it is given a pack, and passes nothing without it. With `--live` it also asks GitHub now for the run's record and the artifact's digest. Neither needs a token; cosign must be on the PATH.
 
 ## Quickstart
 
-One committed copy of a real run, made into a pack and judged, with no network after the first download of NIST's catalog:
+One committed copy of a real run, made into a pack and judged. The network is used for NIST's catalog and the flagship's release the first time, and for Sigstore's trust root each time the gate verifies the flagship's signature:
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install --require-hashes --no-deps -r requirements.lock
@@ -169,7 +169,7 @@ bash scripts/flagship.sh
 RUN_DIR=tests/fixtures/runs/aks-42809539539 bash tests/e2e/run.sh
 ```
 
-The pack lands in `.cache/run/aks-42809539539/evidence`; read `summary.md` first. `PLANT=missing:sc-7` (or any plant `python3 scripts/plant.py all aks` prints) breaks it on purpose. `RUN=<run id>` reads a run from GitHub instead, with `GH_TOKEN` set.
+The pack lands in `.cache/run/aks-42809539539/evidence`; read `summary.md` first. `PLANT=missing:sc-7` (or any plant `python3 scripts/plant.py all aks` prints) breaks it on purpose. `RUN=<run id>` reads a run from the flagship's signed branch instead, with no token.
 
 Everything at once, as CI runs it:
 

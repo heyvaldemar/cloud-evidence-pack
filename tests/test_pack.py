@@ -2,7 +2,9 @@
 
 Every test starts from a committed copy of a real scheduled run
 (tests/fixtures/runs: the run's record and its artifact, byte for byte as
-GitHub's API gave them) and changes one thing. scripts/mutate.py switches
+GitHub's API gave them) and changes one thing. Class Signature and class
+Branch have cosign judge the committed records, and need it on the PATH
+and the network for Sigstore's trust root. scripts/mutate.py switches
 each rule off in a copy of the scripts (tests/plants.tsv) and requires the
 test named there to fail, so SCRIPTS_DIR says which scripts are under test.
 
@@ -10,6 +12,7 @@ test named there to fail, so SCRIPTS_DIR says which scripts are under test.
 
 Needs NIST's catalog in .cache (scripts/catalogs.sh).
 """
+import contextlib
 import copy
 import io
 import json
@@ -19,7 +22,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 import zipfile
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.environ.get("SCRIPTS_DIR") or os.path.join(ROOT, "scripts")
@@ -449,6 +455,11 @@ class Gate(Case):
         self.assertEqual(code, 0, out)
         return evidence
 
+    def gate(self, evidence, *args, env=None):
+        # The rules below the signature. Most of these packs carry a record changed on purpose, which cosign
+        # would refuse before any of them was reached: class Signature has the gate as a reader runs it.
+        return super().gate(evidence, "--unsigned", *args, env=env)
+
     def rewrite(self, evidence, name, old, new):
         path = os.path.join(evidence, name)
         text = self.read(path)
@@ -607,17 +618,26 @@ class Signature(Case):
     def test_the_gate_checks_the_signature(self):
         # Record and run edited alike: every rule that reads them agrees, and only the signature can tell.
         evidence = self.forged()
-        self.assertEqual(self.gate(evidence)[0], 0)
-        code, out = self.gate(evidence, "--signed")
+        # Given the pack and no flag, as a reader runs it, the gate refuses it.
+        code, out = self.gate(evidence)
         self.assertEqual(code, 2, out)
         self.assertIn("signature on the run's record does not verify", out)
+        # Only when told to leave cosign out does it pass, and then it says what it left out.
+        code, out = self.gate(evidence, "--unsigned")
+        self.assertEqual(code, 0, out)
+        self.assertIn("signature on the record was NOT asked for (--unsigned)", out)
+        self.assertNotIn("signature on the record verifies", out)
 
     def test_the_gate_takes_a_record_the_flagship_signed(self):
         code, evidence, out = self.build(os.path.join(RUNS, AKS))
         self.assertEqual(code, 0, out)
-        code, out = self.gate(evidence, "--signed")
+        code, out = self.gate(evidence)
         self.assertEqual(code, 0, out)
         self.assertIn("the flagship's signature on the record verifies", out)
+        # What 1.0.0 asked for with a flag is still taken, and is the same thing.
+        self.assertEqual(self.gate(evidence, "--signed")[1], out)
+        # Asked for and left out at once is not an answer.
+        self.assertEqual(self.gate(evidence, "--signed", "--unsigned")[0], 2)
 
     def test_a_forged_record_under_its_plant(self):
         self.assertTrue(gate.planted(MAPPING, self.forged(), "forged-record")[0])
@@ -625,6 +645,93 @@ class Signature(Case):
         caught, why = gate.planted(MAPPING, evidence, "forged-record")
         self.assertFalse(caught, why)
         self.assertIn("cosign verified", why)
+
+
+class Branch(Case):
+    """Reading a run from the flagship's branch. Its index.json is not signed, so the record it leads to must be
+    the one that was asked for. The branch here is the committed runs, served where raw.githubusercontent.com
+    would be; the records, their signatures, cosign and the rules are the real ones."""
+
+    BASE = f"{fetch.RAW}/{MAPPING['flagship']['repository']}/{MAPPING['flagship']['results']}"
+    RUN, PLACE = AKS.split("-")[1], "aks/" + AKS.split("-")[1] + "-1"
+
+    def fetch(self, path, kept=AKS, record=None, verify=None):
+        """fetch.py's run of RUN, the index keeping it under `path`, where the committed run `kept` is served."""
+        asked = []
+
+        def get(url, token=False, limit=fetch.MAX_ARTIFACT):
+            asked.append(url)
+            if url == f"{self.BASE}/index.json":
+                return json.dumps([{"run": int(self.RUN), "attempt": 1, "path": path}]).encode()
+            name = url.rsplit("/", 1)[1]
+            if name == "record.json" and record is not None:
+                return record
+            return self.read(os.path.join(RUNS, kept, name), "rb")
+
+        def no_plant(*_, **__):
+            raise urllib.error.HTTPError("", 404, "no plant is served here", None, None)
+
+        out = os.path.join(tempfile.mkdtemp(dir=self.tmp), "fetched")
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(fetch, "get", get))
+            stack.enter_context(mock.patch.object(urllib.request, "urlopen", no_plant))
+            stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+            if verify:
+                stack.enter_context(mock.patch.object(fetch, "verify", verify))
+            try:
+                code, why = fetch.fetch_run(MAPPING, self.RUN, out), ""
+            except SystemExit as e:
+                code, why = None, str(e)
+        if "is not signed as" in why and any(w in why for w in ("tuf refresh failed", "error getting live trusted root",
+                                                                "dial tcp", "i/o timeout", "cannot be run")):
+            self.fail(f"cosign could not judge: {why}")
+        return code, why, out, asked
+
+    def test_a_run_the_branch_keeps(self):
+        code, why, out, _ = self.fetch(self.PLACE)
+        self.assertEqual(code, 0, why)
+        for name in ("record.json", "record.json.sigstore.json", "e2e-results-aks.zip"):
+            self.assertEqual(self.read(os.path.join(out, name), "rb"), self.read(os.path.join(RUNS, AKS, name), "rb"))
+        for name in ("run.json", "jobs.json", "artifact.json"):
+            self.assertEqual(json.loads(self.read(os.path.join(out, name))),
+                             json.loads(self.read(os.path.join(RUNS, AKS, name))), name)
+
+    def test_an_index_that_leads_to_another_runs_record(self):
+        # The plant: for the run asked for, the index names the place of another run. That record is the
+        # flagship's own and cosign verifies it. It is not the record of the run that was asked for.
+        code, why, out, _ = self.fetch("aks/41626192017-1", kept="aks-41626192017")
+        self.assertIsNone(code, "the record of another run was taken for the run that was asked for")
+        self.assertIn("is signed by the flagship, and is not that run's", why)
+        self.assertIn("it is the record of run 41626192017", why)
+        self.assertEqual(os.listdir(out), [])
+
+    def test_a_record_kept_under_another_cloud(self):
+        code, why, out, _ = self.fetch("gke/" + self.RUN + "-1")
+        self.assertIsNone(code, "a record of Azure was taken from under gke/")
+        self.assertIn(f"it is kept under gke/{self.RUN}-1, and its own place is {self.PLACE}", why)
+        self.assertNotIn("it is the record of run", why)
+        self.assertEqual(os.listdir(out), [])
+
+    def test_a_record_kept_under_another_attempt(self):
+        code, why, _, _ = self.fetch("aks/" + self.RUN + "-2")
+        self.assertIsNone(code, "the record of attempt 1 was taken from the place of attempt 2")
+        self.assertIn(f"its own place is {self.PLACE}", why)
+
+    def test_a_record_of_another_repository(self):
+        # No such record can carry the flagship's signature, so cosign is left out of this one: the rule alone.
+        doc = json.loads(self.read(os.path.join(RUNS, AKS, "record.json")))
+        doc["repository"] = "someone/else"
+        code, why, _, _ = self.fetch(self.PLACE, record=json.dumps(doc).encode(), verify=lambda *_: None)
+        self.assertIsNone(code, "a record of another repository was taken")
+        self.assertIn("it is a record of someone/else", why)
+
+    def test_an_index_path_that_leaves_the_branch(self):
+        for path in ("../../../someone/else/main/" + self.PLACE, self.PLACE + "/../../gke/1-1",
+                     "https://example.com/" + self.PLACE, self.PLACE + "?ref=", "AKS/" + self.RUN + "-1", None):
+            code, why, _, asked = self.fetch(path)
+            self.assertIsNone(code, path)
+            self.assertIn("which is not <cloud>/<run id>-<attempt>", why)
+            self.assertEqual(asked, [f"{self.BASE}/index.json"], f"{path} was followed")
 
 
 class Plants(Case):

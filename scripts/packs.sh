@@ -9,12 +9,14 @@
 #                  whether or not a pack of it is held: what a release
 #                  carries. A newer run that passed and is not on the branch
 #                  is named, and passed over
-#   MODE=fixtures  the committed copies under tests/fixtures/runs, with no
-#                  network: what a pull request can run
+#   MODE=fixtures  the committed copies under tests/fixtures/runs, with
+#                  nothing read from GitHub: what a pull request can run
 #
-# Each run goes through tests/e2e/run.sh: read from GitHub, built, validated
-# by trestle, judged by the gate, which also asks GitHub again for the run's
-# record and the artifact's digest. A pack that passes is packed into
+# Each run goes through tests/e2e/run.sh: read from the flagship's signed
+# branch, built, validated by trestle, judged by the gate, which verifies the
+# flagship's signature on the run's record and, for a run read now, asks
+# GitHub again for the run's record and the artifact's digest. A pack that
+# passes is packed into
 #
 #   OUT_DIR/<cloud>/<run id>/cloud-evidence-pack-<cloud>-<run id>.tar.gz
 #
@@ -74,10 +76,10 @@ one() { # one CLOUD RUN_ID [RUN_DIR]
   log="$ROOT/.cache/runs/$cloud-$id.log"
   if [ -n "$dir" ]; then
     state="$ROOT/.cache/run/$(basename "$dir")"
-    RUN_DIR="$dir" SIGNED=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
+    RUN_DIR="$dir" bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
   else
     state="$ROOT/.cache/run/run-$id"
-    RUN="$id" LIVE=1 SIGNED=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
+    RUN="$id" LIVE=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
   fi
   if [ "$rc" -ne 0 ]; then
     # The builder's or the gate's own last words, never the whole log.

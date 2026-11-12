@@ -2,7 +2,8 @@
 # validate.sh [check...] - the static checks. None needs a cluster or a cloud
 # account. Once .cache is filled, the network is needed for one thing:
 # Sigstore's trust root, which cosign fetches to verify a signature (the
-# fixtures check, the signature tests, the forged-record plant):
+# fixtures check, the tests of the signature and of reading the flagship's
+# branch, the forged-record plant):
 #
 #   component  mapping/controls.yaml names no control, row of the flagship's
 #              page, check or planted pod that is not there, every control

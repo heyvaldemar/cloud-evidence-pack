@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gate.py EVIDENCE_DIR [--plant PLANT] [--live] - the gate, read from the pack itself.
+"""gate.py EVIDENCE_DIR [--live] [--unsigned] [--plant PLANT] - the gate, read from the pack itself.
 
 A pack's findings are not taken on trust. The gate:
 
@@ -11,24 +11,36 @@ A pack's findings are not taken on trust. The gate:
    models, and fails unless every control the mapping names for the run's
    cloud has exactly one finding, each "satisfied", and no finding is for
    anything else;
-3. fails on any line of the run's results that did not pass, including one
+3. has cosign verify the record of the run the pack carries,
+   run/record.json, against its Sigstore bundle, for one exact identity:
+   the flagship's cloud-results.yml at refs/heads/main;
+4. fails on any line of the run's results that did not pass, including one
    no control rests on.
 
-Exits 0 when none of these, 1 when any, 2 when the pack cannot be read or
-its run/ is not a scheduled run's own file: no evidence is a failure, never
+Exits 0 when none of these, 1 when a control or a line fails or a document
+differs, 2 when the pack cannot be read, its run/ is not a scheduled run's
+own file, or the signature does not verify: no evidence is a failure, never
 a pass.
 
-With --signed it also has cosign verify the record of the run the pack
-carries, run/record.json, against its Sigstore bundle, for one exact
-identity: the flagship's cloud-results.yml at refs/heads/main. It exits 2
-when the signature does not verify.
+The signature is asked for whenever the gate is given a pack, with no flag.
+A record and a run edited alike agree with every other rule here, and only
+the signature can tell (the forged-record plant), so a gate that left it to
+a flag would pass a forgery to anyone who forgot the flag. It needs cosign
+on the PATH and the network, for Sigstore's trust root. --signed, which
+asked for this in 1.0.0, is still taken and changes nothing.
+
+--unsigned leaves cosign out, and the last line says so. It is for the
+tests of the rules below the signature, which change the record on purpose,
+and never how a pack is judged.
 
 With --live it also asks GitHub now for the run's record and the
 artifact's digest, and exits 2 unless both are what the pack holds. It
 needs no token, the network, and the artifact not yet expired.
 
 With --plant, the run or the pack was broken on purpose (scripts/plant.py),
-and the gate must catch it for the planted reason. It exits 0 only if:
+and the gate must catch it for the planted reason. This judges the plant,
+not a pack, and asks cosign only where the plant is about the signature.
+It exits 0 only if:
 
   missing:, failed:, uncontrolled:, renamed:
       exactly the controls resting on the broken lines are not satisfied,
@@ -200,7 +212,9 @@ def main():
     ap.add_argument("evidence")
     ap.add_argument("--plant")
     ap.add_argument("--live", action="store_true")
-    ap.add_argument("--signed", action="store_true")
+    how = ap.add_mutually_exclusive_group()
+    how.add_argument("--unsigned", action="store_true")
+    how.add_argument("--signed", action="store_true")  # 1.0.0 asked for the signature so; it is asked for anyway
     args = ap.parse_args()
     # Always the committed mapping, never the copy inside the pack.
     mapping = pack.load_mapping(MAPPING)
@@ -215,9 +229,9 @@ def main():
     try:
         verdict, differ = rebuilt(mapping, args.evidence)
         found = read(args.evidence)
-        unsigned = signature(mapping, args.evidence) if args.signed else None
-        if unsigned:
-            raise Unreadable(f"the flagship's signature on the run's record does not verify: {unsigned}")
+        refused = None if args.unsigned else signature(mapping, args.evidence)
+        if refused:
+            raise Unreadable(f"the flagship's signature on the run's record does not verify: {refused}")
         gone = live(mapping, verdict) if args.live else []
         if gone:
             raise Unreadable("; ".join(gone))
@@ -232,7 +246,8 @@ def main():
     bad = {what for kind, what, _ in failures if kind == "control"}
     print(f"== {verdict['cloud']} run {verdict['run']['id']}: {len(mapped) - len(bad & {c['control'] for c in mapped})} "
           f"of {len(mapped)} controls satisfied, {len(verdict['failed_lines'])} of {verdict['lines']} lines failed"
-          + (", the flagship's signature on the record verifies" if args.signed else "")
+          + (", the flagship's signature on the record was NOT asked for (--unsigned)" if args.unsigned
+             else ", the flagship's signature on the record verifies")
           + (", GitHub's record and digest agree" if args.live else ""))
     why = {what: reason for kind, what, reason in failures if kind == "control"}
     emit([{"state": state(c["control"] not in why), "name": f"{c['name']}: {why.get(c['control'], 'satisfied')}"}

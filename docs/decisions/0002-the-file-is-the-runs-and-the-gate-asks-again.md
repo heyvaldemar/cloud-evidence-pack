@@ -9,11 +9,11 @@ A pack built from another repository's run is worth what the link between them i
 
 ## Decision
 
-1. **A pack's source is what the flagship signed.** Since its ADR 25 the flagship's workflow `cloud-results.yml` keeps every finished cloud run on a branch: a record of the run's facts with the sha256 of the results it uploaded, signed keyless on main. `scripts/fetch.py` reads the record, its Sigstore bundle and the file with no token, and takes them only when cosign verifies the record for one exact identity, that workflow at `refs/heads/main`, and the file has the sha256 the record names.
+1. **A pack's source is what the flagship signed.** Since its ADR 25 the flagship's workflow `cloud-results.yml` keeps every finished cloud run on a branch: a record of the run's facts with the sha256 of the results it uploaded, signed keyless on main. `scripts/fetch.py` reads the record, its Sigstore bundle and the file with no token, and takes them only when cosign verifies the record for one exact identity, that workflow at `refs/heads/main`, and the file has the sha256 the record names. The branch's `index.json` says where each run is kept, and nobody signed it. So a signed record is also held to the run that was asked for: it must be that run's, the flagship's, and kept under `<cloud>/<run id>-<attempt>` as the record itself gives them, and an index path of any other shape is not followed.
 2. **Of those, only a scheduled run on `main` that passed.** `scripts/pack.py` refuses a run with no signed record beside it, a run or an artifact that is not what the record says, a run of another repository or a fork, of a workflow that is no cloud's, started by anything but the schedule, on another branch, unfinished or failed. A run started by hand is never a source, however green.
 3. **The pack carries the record, the signature and the file**, and the assessment results name them in back-matter with their hashes.
 4. **The documents are a function of the run and the mapping.** No clock and no random id: every identifier is derived from the run, and every time is the run's.
-5. **The gate does not trust a pack.** `scripts/gate.py` builds the documents again from the pack's own `run/` and fails if a byte differs, so a finding edited afterwards is caught though trestle still reads it. With `--signed` it has cosign verify the record again, and with `--live` it asks GitHub for the run's record and the artifact's digest.
+5. **The gate does not trust a pack.** `scripts/gate.py` builds the documents again from the pack's own `run/` and fails if a byte differs, so a finding edited afterwards is caught though trestle still reads it. It has cosign verify the record again, every time it is given a pack: a record and a run edited alike agree with every other rule, so a gate that left the signature to a flag would pass a forgery to anyone who forgot the flag. `--unsigned` leaves cosign out for the tests of the rules below the signature, and the gate's last line says so. With `--live` the gate also asks GitHub for the run's record and the artifact's digest.
 6. **Nothing is signed that the gate has not passed**, and a pack's own signature is keyless, as this repository's workflow at its ref.
 
 ## What was measured, 2026-11-11
@@ -26,8 +26,9 @@ A pack built from another repository's run is worth what the link between them i
 
 - A reader checks a pack with two commands and no account, and the check does not expire with GitHub's artifact.
 - The record is signed after the run, by another workflow of the same repository, from GitHub's record of the run. The cloud job does not sign its own results.
+- The index can still leave a run out, or name an older attempt of a run. The first gives no pack. The second is refused by `--live`, which asks GitHub for the run's attempt, and every pack built from a run read now is judged with it.
 - A run the flagship's branch holds no record of gets no pack. On 2026-11-11 that was one run by hand, 43101489006, whose artifact held a scratch file the flagship's rule refuses.
-- Sigstore's trust root is fetched to verify a signature, so reading a run and the gate's `--signed` need the network. A fetch that fails is tried again; a signature that does not verify is not.
+- Sigstore's trust root is fetched to verify a signature, so reading a run and the gate need the network. A fetch that fails is tried again; a signature that does not verify is not.
 
 ## Alternatives
 

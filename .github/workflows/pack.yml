@@ -324,5 +324,5 @@ jobs:
             [[ "$(basename "$pack")" =~ ^cloud-evidence-pack-[a-z]+-[0-9]+\.tar\.gz$ ]] || continue
             rm -rf unpacked && mkdir unpacked && tar -xzf "$pack" -C unpacked
             bash scripts/validate.sh unpacked/evidence
-            python3 scripts/gate.py unpacked/evidence --signed --live
+            python3 scripts/gate.py unpacked/evidence --live
           done

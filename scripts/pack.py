@@ -24,7 +24,7 @@ Three steps, in this order:
    record names. Anything else is refused: exit 2, and nothing is written.
    A run started by hand is never a pack's source. The signature itself is
    verified by scripts/fetch.py when the run is read and by scripts/gate.py
-   --signed on the pack: here it is only required to be there.
+   on the pack: here the bundle is only required to be there (has_bundle).
 2. What the run did. Each check the mapping names for this cloud is looked
    for in the run's e2e-results.json, by the whole line. A planted pod's
    line must carry the words its own file expects, read at the run's commit.
@@ -98,7 +98,9 @@ def read_run(run_dir):
     """What fetch.py kept of one run. The artifact and its record are None when the run kept none."""
     r = {"run": read_json(os.path.join(run_dir, "run.json"), "the run's record"),
          "jobs": [], "artifact": None, "archive": None, "plants": {}, "record": None, "record_sha256": None,
-         "signed": os.path.exists(os.path.join(run_dir, "record.json.sigstore.json"))}
+         # Only that a bundle is there. Whether it verifies is cosign's to say: scripts/fetch.py asks when the
+         # run is read, and scripts/gate.py asks again on the pack.
+         "has_bundle": os.path.exists(os.path.join(run_dir, "record.json.sigstore.json"))}
     if os.path.exists(os.path.join(run_dir, "record.json")):
         r["record"] = read_json(os.path.join(run_dir, "record.json"), "the record the flagship signed")
         with open(os.path.join(run_dir, "record.json"), "rb") as f:
@@ -128,7 +130,7 @@ def provenance(mapping, r):
     flagship, run, reasons = mapping["flagship"], r["run"], []
     cloud = cloud_of(mapping, run)
     record = r.get("record")
-    if record is None or not r.get("signed"):
+    if record is None or not r.get("has_bundle"):
         reasons.append("no record signed by the flagship is beside the run: the record or its signature is missing")
         record = None
     else:
