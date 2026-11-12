@@ -54,7 +54,10 @@ jobs:
     # nothing to anyone. Pushes, pull requests and releases run either way.
     if: github.event_name != 'schedule' || github.event.repository.private == false
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Run 43134381096 took 22 minutes here with 177 plants, 66 rules switched
+    # off and 26 static plants. A fifth committed run made that 235, 77 and
+    # 35, and two of the static plants run every plant again.
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
