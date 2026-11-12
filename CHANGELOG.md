@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Fixed
 
-- The release's last job verifies the packs and nothing else. It also took the repository's own source archive, which `release-assets.yml` signs as itself, for a pack, and failed on it in run 43137012297 after the three packs of v1.0.0 had verified. The assets of v1.0.0 are right, and verify from an empty directory.
+- Run 43137012297, the release run of v1.0.0, is red in its last job: after the three packs had verified, the job took the repository's own source archive, which `release-assets.yml` signs as itself, for a fourth pack and failed on its identity. The signatures and the assets of v1.0.0 were not affected: they verify from an empty directory. The check is now a script, `scripts/release-verify.sh`: a pack is an archive named `<cloud>-<run id>` and nothing else, static check `release` runs it on one real pack of v1.0.0 in six cases, and five plants break it one way each.
 
 ## [1.0.0] - 2026-11-12
 

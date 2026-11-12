@@ -138,12 +138,6 @@ jobs:
       # from a verified commit here does. Fourteen repositories found that out
       # on 2026-09-24. The job below only adds an asset, which is allowed.
       upload-assets: false
-      # Not in the fleet's template: this repository's first release is cut
-      # while it is still private, and the generator stops in a private
-      # repository unless told its name may go to Sigstore's public log,
-      # where the packs' own signatures already put it. It changes nothing
-      # once the repository is public.
-      private-repository: true
 
   attach:
     name: Attach the provenance to the release

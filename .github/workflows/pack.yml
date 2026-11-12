@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           # shellcheck source=/dev/null
           . <(grep -E '^[A-Z_]+=' ci-images.pins)
-          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tests/e2e/*.sh
+          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tests/e2e/*.sh tests/static/*.sh
           docker run --rm -v "$PWD:/repo" -w /repo "$ACTIONLINT_IMAGE" -color
 
   packs:
@@ -250,12 +250,6 @@ jobs:
       base64-subjects: ${{ needs.packs.outputs.subjects }}
       provenance-name: cloud-evidence-packs.intoto.jsonl
       upload-assets: false
-      # The generator stops in a private repository unless it is told the
-      # repository's name may go to Sigstore's public log. It may: the packs'
-      # own keyless signatures put it there since run 43112673693, and the
-      # repository is private only until its first review. It changes nothing
-      # once the repository is public.
-      private-repository: true
 
   attach:
     name: Attach the packs to the release, and verify them as a stranger would
@@ -297,47 +291,24 @@ jobs:
           gh release upload "$TAG" out/* --clobber
 
       # From here nothing of the build is used: the files are the release's,
-      # downloaded again.
+      # downloaded again, and the script is the tag's own.
+      - name: Checkout the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+
+      # Everything the release holds, the source archive among it: the check
+      # itself tells a pack from what is not one (scripts/release-verify.sh).
       - name: Verify what the release now holds, and that a changed copy fails
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          mkdir -p check && cd check
-          # The packs alone, <cloud>-<run id>: the release also holds this
-          # repository's source archive, cloud-evidence-pack-<tag>.tar.gz,
-          # which release-assets.yml signs as itself. Run 43137012297 took it
-          # for a pack and failed here, after all three packs had verified.
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p 'cloud-evidence-pack-*-*.tar.gz' \
-            -p 'cloud-evidence-pack-*-*.tar.gz.sigstore.json' -p 'cloud-evidence-packs.intoto.jsonl'
-          sig=(--certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/pack.yml@refs/tags/$TAG"
-               --certificate-oidc-issuer https://token.actions.githubusercontent.com)
-          checked=0
-          for pack in cloud-evidence-pack-*-*.tar.gz; do
-            cosign verify-blob "$pack" --bundle "$pack.sigstore.json" "${sig[@]}"
-            slsa-verifier verify-artifact "$pack" --provenance-path cloud-evidence-packs.intoto.jsonl \
-              --source-uri "github.com/$GITHUB_REPOSITORY" --source-tag "$TAG"
-            cp "$pack" changed.tar.gz && printf 'x' >> changed.tar.gz
-            if cosign verify-blob changed.tar.gz --bundle "$pack.sigstore.json" "${sig[@]}"; then
-              echo "::error::cosign accepted $pack with one byte appended"; exit 1
-            fi
-            if slsa-verifier verify-artifact changed.tar.gz --provenance-path cloud-evidence-packs.intoto.jsonl \
-                 --source-uri "github.com/$GITHUB_REPOSITORY" --source-tag "$TAG"; then
-              echo "::error::slsa-verifier accepted $pack with one byte appended"; exit 1
-            fi
-            checked=$((checked + 1))
-          done
-          [ "$checked" -ge 1 ] || { echo "::error::the release holds no pack"; exit 1; }
-          echo "$checked pack(s) verify, and a changed copy of each does not"
-
-      # The gate once more, on the packs the release holds, from a fresh
-      # checkout of the tag: what the README tells a reader to do.
-      - name: Checkout the tag
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          path: src
+          mkdir -p check
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D check
+          bash src/scripts/release-verify.sh check "$TAG"
 
       - name: The gate, on each pack the release holds
         env:
@@ -350,6 +321,7 @@ jobs:
           export PATH="$PWD/.venv/bin:$PATH"
           bash scripts/catalogs.sh
           for pack in ../check/cloud-evidence-pack-*-*.tar.gz; do
+            [[ "$(basename "$pack")" =~ ^cloud-evidence-pack-[a-z]+-[0-9]+\.tar\.gz$ ]] || continue
             rm -rf unpacked && mkdir unpacked && tar -xzf "$pack" -C unpacked
             bash scripts/validate.sh unpacked/evidence
             python3 scripts/gate.py unpacked/evidence --signed --live

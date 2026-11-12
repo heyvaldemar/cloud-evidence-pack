@@ -198,6 +198,7 @@ Runner time on GitHub's hosted runners, and nothing else: no cloud account, no s
 | `scripts/fetch.py`, `pack.py`, `gate.py` | Read a run from the flagship's signed branch, build its pack, judge it |
 | `scripts/index.py` | Every scheduled run of each cloud, and what became of it |
 | `scripts/plant.py`, `mutate.py`, `validate.sh` | The plants, the rules switched off in turn, the static checks |
+| `scripts/release-verify.sh` | What a release holds, checked as a stranger would: each pack's signature and provenance, and a changed copy refused |
 | `tests/fixtures/runs` | Real scheduled runs, each with the record the flagship signed, byte for byte as its branch holds them |
 | `tests/e2e/run.sh` | The whole run, as CI runs it |
 

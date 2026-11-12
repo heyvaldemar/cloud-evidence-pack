@@ -24,6 +24,12 @@
 #              for it fails by an assertion (scripts/mutate.py)
 #   plants     every plant scripts/plant.py knows, on every committed run:
 #              each caught, and for its own reason (tests/e2e/plants.sh)
+#   release    what a release holds, checked as its last job checks it
+#              (scripts/release-verify.sh), on one real pack of v1.0.0: an
+#              archive that is not <cloud>-<run id> is passed over, a pack
+#              with a signature or a provenance that is not its own fails
+#              the release, and so does a release with no pack
+#              (tests/static/release-verify.sh)
 #
 # validate.sh EVIDENCE_DIR - compliance-trestle's validator over one pack's
 # documents. tests/e2e/run.sh calls it so, and so does anyone checking a
@@ -174,6 +180,11 @@ check_plants() {
   return "${PIPESTATUS[0]}"
 }
 
+check_release() {
+  bash tests/static/release-verify.sh 2>&1 | grep -E '^(FAIL|[0-9]+ of [0-9]+ cases)'
+  return "${PIPESTATUS[0]}"
+}
+
 # One argument that names no check and is a directory: a pack's evidence.
 if [ $# -eq 1 ] && ! declare -F "check_$1" >/dev/null && [ -d "$1" ]; then
   dir="$(cd "$1" && pwd)"
@@ -188,7 +199,7 @@ if [ ! -d .cache/flagship/src ] || [ ! -d .cache/catalogs ]; then
   exit 2
 fi
 checks=("$@")
-[ ${#checks[@]} -eq 0 ] && checks=(component fixtures images trestle gate mutations plants)
+[ ${#checks[@]} -eq 0 ] && checks=(component fixtures images trestle gate mutations plants release)
 failed=0
 for c in "${checks[@]}"; do
   if ! declare -F "check_$c" >/dev/null; then echo "-- $c: no such check"; failed=1; continue; fi
