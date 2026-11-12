@@ -4,14 +4,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- The scheduled AWS run of 2026-11-12, 43199517532, as a fifth committed copy (`tests/fixtures/runs/aws-43199517532`): 121 lines, and the first run that passed with the flagship's Vault checks, a GPU node, and the agent run a second time on a larger model.
+
 ### Changed
 
+- A line a run writes more than once is a line each time: an observation of its own in the assessment results, the second marked `occurrence: 2`, and listed and counted so in the summary. Before, the same words were one observation, and for such a run the summary gave 5 lines where the finding beside it gave 7. Packs of runs that write no line twice are the same but for the mapping's version, which is 1.0.1.
 - The gate verifies the flagship's signature on the run's record whenever it is given a pack. In 1.0.0 that was done only with `--signed`, and `python3 scripts/gate.py evidence` alone passed a pack whose record and run had been edited alike. `--signed` is still taken and changes nothing; `--unsigned` leaves cosign out, for the tests of the rules below the signature, and the gate's last line then says the signature was not asked for. The `forged-record` plant now also runs the gate with no flag and requires it to refuse the pack for the signature.
 - `scripts/fetch.py` holds the record the branch's index leads to, to the run that was asked for. The index is not signed, so a record signed by the flagship must also be of that run, of the flagship's repository, and kept under `<cloud>/<run id>-<attempt>` as its own cloud, run and attempt give it; an index path of any other shape is not followed. In 1.0.0 a record the flagship had signed for one run was taken for whichever run the index named it for.
 - In `scripts/pack.py` the field that says a Sigstore bundle lies beside the record is `has_bundle`, not `signed`: the builder only requires the bundle to be there, and cosign's verdict is `fetch.py`'s and the gate's.
 
 ### Fixed
 
+- A check asked for one line where an AWS run with a GPU writes two, one each time it takes the agent through the evals, so a line lost one of those times hid behind the other. On run 43199517532, 3 of the 58 plants were not caught: `renamed:outside-email`, `renamed:control-email` and `renamed:gateway-every-request`. `written_together` in the mapping names the three checks, and each must have as many lines as the others ([ADR 5](docs/decisions/0005-a-line-written-twice-is-two-lines.md)). The pack of that run was built only after the fix.
 - Run 43137012297, the release run of v1.0.0, is red in its last job: after the three packs had verified, the job took the repository's own source archive, which `release-assets.yml` signs as itself, for a fourth pack and failed on its identity. The signatures and the assets of v1.0.0 were not affected: they verify from an empty directory. The check is now a script, `scripts/release-verify.sh`: a pack is an archive named `<cloud>-<run id>` and nothing else, static check `release` runs it on one real pack of v1.0.0 in six cases, and five plants break it one way each.
 
 ## [1.0.0] - 2026-11-12

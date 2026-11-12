@@ -44,6 +44,7 @@ kept. Exits 0 when a pack is written, whatever its findings say (judging is
 the gate's work), and 2 when the run is refused or cannot be read: no
 evidence is a failure, never a pass.
 """
+import collections
 import hashlib
 import html
 import io
@@ -196,6 +197,16 @@ def results_of(archive):
     return members[0], sha256(body), checks, [m for m in doc.get("measured") or [] if isinstance(m, str)]
 
 
+def turns(lines):
+    """Each line with its turn among the same words. A run can write one line more than once, once each time it
+    does the same thing, and each is a line of the run."""
+    seen, out = collections.Counter(), []
+    for line in lines:
+        out.append((line, seen[line]))
+        seen[line] += 1
+    return out
+
+
 def plant_line(name, text):
     """(pattern, kind) for the line the flagship's e2e writes when a planted pod did what its file expects."""
     m = re.search(r"^# expect: (.+)$", text, re.M)
@@ -244,6 +255,16 @@ def judge(mapping, cloud, checks, plants):
         if cloud in spec["clouds"]:
             lines, why = match(spec, checks, plants, cloud)
             held[name] = {"kind": spec["kind"], "ok": why is None, "why": why, "lines": [c["name"] for c in lines]}
+    # Lines the flagship writes side by side: as many of one as of the others, however many times the run wrote them.
+    for group in mapping.get("written_together", []):
+        mine = [g for g in group if g in held]
+        most = max((len(held[g]["lines"]) for g in mine), default=0)
+        for g in mine:
+            n = len(held[g]["lines"])
+            if held[g]["ok"] and n < most:
+                beside = next(o for o in mine if len(held[o]["lines"]) == most)
+                held[g].update(ok=False, why=f"{n} of the run's lines match, and {most} match {beside}, "
+                                             f"which the run writes beside it each time")
     controls = {}
     for c in mapping["controls"]:
         if cloud not in c["clouds"]:
@@ -422,9 +443,10 @@ def documents(mapping, cloud, r, verdict, facts):
     observations, by_line = [], {}
     for g in used:
         gspec = mapping["checks"][g]
-        for line in verdict["checks"][g]["lines"]:
-            if line in by_line:
-                by_line[line]["props"].append(prop("check", g))
+        for line, again in turns(verdict["checks"][g]["lines"]):
+            key = (line, again)
+            if key in by_line:
+                by_line[key]["props"].append(prop("check", g))
                 continue
             passed = line not in verdict["failed_lines"]
             evidence = [{"href": f"#{resources['artifact']['uuid']}",
@@ -432,19 +454,21 @@ def documents(mapping, cloud, r, verdict, facts):
             if "plant" in gspec:
                 evidence.append({"href": f"{blob}/{flagship['plants']}/{gspec['plant']}.yaml",
                                  "description": "The planted pod, as the flagship had it at the run's commit."})
-            by_line[line] = {"uuid": u(f"line/{line}"), "title": f"{gspec['kind']}: {g}", "description": line,
-                             "methods": ["TEST"],
-                             "props": [prop("passed", "true" if passed else "false"), prop("kind", gspec["kind"]),
-                                       prop("check", g)],
-                             "relevant-evidence": evidence, "collected": stamp(artifact["created_at"]),
-                             "remarks": gspec["says"]}
-            observations.append(by_line[line])
+            # The second time a run wrote the same words is an observation of its own, and says which it is.
+            by_line[key] = {"uuid": u(f"line/{line}" if not again else f"line/{line}/{again + 1}"),
+                            "title": f"{gspec['kind']}: {g}", "description": line, "methods": ["TEST"],
+                            "props": [prop("passed", "true" if passed else "false"), prop("kind", gspec["kind"]),
+                                      prop("check", g)] + ([prop("occurrence", again + 1)] if again else []),
+                            "relevant-evidence": evidence, "collected": stamp(artifact["created_at"]),
+                            "remarks": gspec["says"]}
+            observations.append(by_line[key])
 
     findings = []
     for c in controls:
         v = verdict["controls"][c["control"]]
-        lines = [l for g in c["checks"] if g in verdict["checks"] for l in verdict["checks"][g]["lines"]]
-        refused = [l for g in v["checks"]["refusal"] for l in verdict["checks"][g]["lines"]]
+        lines = list(dict.fromkeys(o for g in c["checks"] if g in verdict["checks"]
+                                   for o in turns(verdict["checks"][g]["lines"])))
+        refused = list(dict.fromkeys(o for g in v["checks"]["refusal"] for o in turns(verdict["checks"][g]["lines"])))
         findings.append({
             "uuid": u(f"finding/{c['control']}"), "title": f"{c['name']}: {v['state']}",
             "description": ("; ".join(v["why"]) if v["why"] else
@@ -457,7 +481,7 @@ def documents(mapping, cloud, r, verdict, facts):
                         for element in (elements or ["none"])],
             "target": {"type": "statement-id", "target-id": smt[c["control"]],
                        "status": {"state": v["state"], "reason": "pass" if v["state"] == "satisfied" else "fail"}},
-            "related-observations": [{"observation-uuid": by_line[l]["uuid"]} for l in dict.fromkeys(lines)],
+            "related-observations": [{"observation-uuid": by_line[o]["uuid"]} for o in lines],
             "remarks": "What this leaves out: " + " ".join(c["not_covered"].split()),
         })
 
@@ -490,9 +514,9 @@ def summary(mapping, cloud, r, verdict):
     digest = artifact["digest"].split(":", 1)[1]
 
     def lines_of(c, kinds):
-        out = [l for k in kinds for g in verdict["controls"][c["control"]]["checks"][k]
-               for l in verdict["checks"][g]["lines"]]
-        return list(dict.fromkeys(out))
+        out = [o for k in kinds for g in verdict["controls"][c["control"]]["checks"][k]
+               for o in turns(verdict["checks"][g]["lines"])]
+        return [line for line, _ in dict.fromkeys(out)]
 
     text = [
         f"# Evidence pack: {spec['title']}, scheduled run {run['id']}", "",

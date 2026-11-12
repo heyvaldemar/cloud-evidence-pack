@@ -8,16 +8,17 @@ A pack shows what one scheduled run did. It does not say that any system meets a
 
 ## What the runs show
 
-Four scheduled runs, each read from its own artifact:
+Five scheduled runs, each read from its own artifact:
 
 | Cloud | Scheduled run | Date, commit | Lines in its results | Mapped controls satisfied |
 |---|---|---|---|---|
-| AWS, an EKS cluster in a VPC with no internet gateway and no NAT | [39744285464](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39744285464) | 2026-10-22, `78fdcc6` | 56, none failed | 6 of 6 |
+| AWS, an EKS cluster in a VPC with no internet gateway and no NAT | [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532) | 2026-11-12, `612768c` | 121, none failed | 6 of 6 |
+| AWS, three weeks before | [39744285464](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39744285464) | 2026-10-22, `78fdcc6` | 56, none failed | 6 of 6 |
 | Google Cloud, a private GKE cluster in a VPC made without its route to the internet | [42206932411](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411) | 2026-11-06, `473fa4a` | 63, none failed | 6 of 6 |
 | Azure, a network isolated AKS cluster; the boundary alone, with no agent on it | [42809539539](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539) | 2026-11-10, `a943f70` | 21, none failed | 2 of 2 |
 | Azure, the week before | [41626192017](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41626192017) | 2026-11-03, `27ba3c8` | 21, none failed | 2 of 2 |
 
-The AWS run is the last scheduled one that passed: the two after it, [40845619217](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217) and [42005832115](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115), failed, and a failed run gets no pack. The first scheduled GKE run, [41038578800](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800), failed before it made anything.
+Between the two AWS runs the scheduled ones failed, [40845619217](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217) and [42005832115](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115), and a failed run gets no pack. The newer AWS run holds 121 lines where the older holds 56, because the flagship grew in those three weeks: Vault, a GPU node, and the agent run a second time on a larger model. The mapping names 36 of the 121. The other 85 are held to one thing: none failed. The first scheduled GKE run, [41038578800](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800), failed before it made anything.
 
 ## The controls
 
@@ -36,7 +37,7 @@ Azure has two controls because its run makes the boundary alone: no agent and no
 
 Each cloud's DNS check has also failed once, by hand, with the resolver's policy left off: AWS [39632816543](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39632816543), Google Cloud [40560466605](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40560466605), Azure [41007916564](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41007916564). Copies of those three runs are in [`tests/fixtures/violations`](tests/fixtures/violations), and a static check holds each to the failed line it is cited for.
 
-**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks, which no scheduled cloud run that passed has run yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate. [kubernetes-oscal-evidence](https://github.com/heyvaldemar/kubernetes-oscal-evidence) dropped it for the same reason in its v1.2.0.
+**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks. One scheduled cloud run that passed has run them, the AWS run of 2026-11-12, and the mapping does not name them yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate. [kubernetes-oscal-evidence](https://github.com/heyvaldemar/kubernetes-oscal-evidence) dropped it for the same reason in its v1.2.0.
 
 **What every row leaves out** is in the pack beside the row. In short: the boundary is refused, not monitored, and IPv6 is not tried; an email is held to a domain, not to a person; integrity is checked on the way in and not between runs; provenance is a record that is there and signed, not a record shown to be true; authenticity is checked against a key with no transparency log.
 
@@ -120,6 +121,8 @@ A gate that has never failed proves nothing. [`scripts/plant.py`](scripts/plant.
 In [run 43131454456](https://github.com/heyvaldemar/cloud-evidence-pack/actions/runs/43131454456) that was 177 plants on the four committed runs, each caught for its own reason.
 
 The first full pass, before any of this was pushed, missed eight. Two patterns in the mapping ended in "anything", so a renamed line still matched them; and two checks asked for one line where Google Cloud's and Azure's runs write two, so one could vanish behind the other. The mapping now names each line to its end and counts lines cloud by cloud.
+
+The scheduled AWS run of 2026-11-12, [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532), missed three more, before a pack of it was published. With a GPU, an AWS run takes the agent through the evals a second time, on a larger model, and writes three of AC-4's lines again. Each check asked for one line, so a line lost the second time hid behind the first. The mapping now names the three as written together, and each must have as many lines as the others ([ADR 5](docs/decisions/0005-a-line-written-twice-is-two-lines.md)). That run is the fifth committed copy, and a line a run writes twice is listed and observed twice.
 
 The rules are held the same way. [`tests/test_pack.py`](tests/test_pack.py) and [`tests/test_index.py`](tests/test_index.py) feed each rule what breaks it, on the real runs' files; [`scripts/mutate.py`](scripts/mutate.py) switches each rule off in a copy, from [`tests/plants.tsv`](tests/plants.tsv), and requires a named test to fail by an assertion. A test that only crashes on the changed script has judged nothing and counts as missed. [`tests/static/plants.tsv`](tests/static/plants.tsv) breaks the static checks of [`scripts/validate.sh`](scripts/validate.sh), and [`tests/static/plant_violations.py`](tests/static/plant_violations.py) requires the named check to fail on each. The same run: 66 rules switched off and 26 static plants, every one caught.
 

@@ -16,8 +16,8 @@
 # Each control says what it leaves out. Nothing here says that a system
 # meets a framework: a pack shows what one scheduled run did.
 
-version: 1.0.0
-last_modified: "2026-11-11T00:00:00+00:00"
+version: 1.0.1
+last_modified: "2026-11-12T14:39:03+00:00"
 
 # The system whose runs these are, and the hand-made page every control
 # below is a row of. The runs are read from this repository and no other.
@@ -87,6 +87,9 @@ clouds:
 # still matches. Every line that matches must have passed. clouds is where
 # the line is written. A line the mapping names and the run does not have
 # leaves its control not satisfied: a renamed line is never skipped.
+#
+# A run can write the same line more than once, and each is a line of the
+# run: counted, listed and observed as many times as the run wrote it.
 checks:
   # --- the boundary, tried from inside: tests/e2e/<cloud>.sh ---------------
   pod-egress-tcp:
@@ -223,6 +226,16 @@ checks:
     clouds: [aws, gke]
     line: 'every model request went through the gateway: (\d+) asked by the agent, \1 answered by the gateway'
     says: The gateway's count of answered requests equals the agent's count of requests asked.
+
+# Checks whose lines the flagship writes side by side, once each time it
+# does the same thing in a run. Each must have as many lines as the others.
+# at_least cannot say this, because the number is the run's own: an AWS run
+# puts the agent through scripts/evals.sh a second time, on a larger model,
+# when it has a GPU, and writes these three lines again; with no GPU, and on
+# Google Cloud, it writes them once. A check here with fewer lines than
+# another has lost one, and the line that is left does not stand for it.
+written_together:
+  - [outside-email, control-email, gateway-every-request]
 
 # The controls, by NIST's own ids. page_row is the row of the flagship's
 # docs/compliance.md a control is the machine-readable form of, as that

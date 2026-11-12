@@ -113,6 +113,15 @@ def problems(mapping, smt, flagship=FLAGSHIP):
                 bad.append(f"control {cid} on {cloud}: nothing there had to succeed beside the refusals")
     for name in sorted(set(checks) - used):
         bad.append(f"check {name}: no control names it")
+    for group in mapping.get("written_together", []):
+        if not isinstance(group, list) or len(group) < 2 or len(set(group)) < len(group):
+            bad.append(f"written_together {group}: it must name two checks or more, each once")
+            continue
+        missing = [g for g in group if g not in checks]
+        if missing:
+            bad.append(f"written_together {group}: names checks that are not defined: {', '.join(missing)}")
+        elif len({tuple(sorted(checks[g].get("clouds", []))) for g in group}) > 1:
+            bad.append(f"written_together {group}: its checks are not written on the same clouds")
     for name, cw in mapping.get("crosswalks", {}).items():
         if pack.pinned(cw.get("file"))[0] is None:
             bad.append(f"crosswalk {name}: catalogs.lock does not pin {cw.get('file')}")

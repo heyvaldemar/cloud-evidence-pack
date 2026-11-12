@@ -74,3 +74,8 @@
 "scripts/fetch.py"	"    if record.get(\"repository\") != repo:"	"    if False:"	"Branch.test_a_record_of_another_repository"	"a record of another repository, taken as the flagship's"
 "scripts/fetch.py"	"    if entry[\"path\"] != place:"	"    if False:"	"Branch.test_a_record_kept_under_another_cloud"	"a record kept where it does not belong, taken"
 "scripts/fetch.py"	"    if not re.fullmatch(r\"[a-z]+/[0-9]{1,20}-[0-9]{1,4}\", str(entry.get(\"path\"))):"	"    if False:"	"Branch.test_an_index_path_that_leaves_the_branch"	"an index path followed off the flagship's branch"
+"scripts/pack.py"	"            if held[g][\"ok\"] and n < most:"	"            if False:"	"Judge.test_a_line_one_of_two_times_lost"	"a line lost one of the two times a run wrote it, hidden behind the time that is left"
+"scripts/pack.py"	"        seen[line] += 1\n"	""	"Documents.test_a_line_written_twice_is_two_observations"	"a line the run wrote twice, observed once"
+"scripts/pack.py"	"        return [line for line, _ in dict.fromkeys(out)]"	"        return list(dict.fromkeys(line for line, _ in out))"	"Documents.test_a_line_written_twice_is_two_observations"	"a summary that lists once a line the run wrote twice"
+"scripts/pack.py"	"prop(\"check\", g)] + ([prop(\"occurrence\", again + 1)] if again else []),"	"prop(\"check\", g)],"	"Documents.test_a_line_written_twice_is_two_observations"	"the second observation of the same words, not told from the first"
+"scripts/pack.py"	"u(f\"line/{line}\" if not again else f\"line/{line}/{again + 1}\")"	"u(f\"line/{line}\")"	"Documents.test_every_observation_is_a_line_of_the_run"	"two observations under one UUID"

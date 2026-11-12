@@ -12,6 +12,7 @@ test named there to fail, so SCRIPTS_DIR says which scripts are under test.
 
 Needs NIST's catalog in .cache (scripts/catalogs.sh).
 """
+import collections
 import contextlib
 import copy
 import io
@@ -37,6 +38,10 @@ import plant  # noqa: E402
 
 RUNS = os.path.join(ROOT, "tests", "fixtures", "runs")
 AWS, GKE, AKS = "aws-39744285464", "gke-42206932411", "aks-42809539539"
+# An AWS run since the flagship put a larger model on the GPU: the agent goes through the evals twice in it, and
+# each time writes the three lines AC-4 rests on beside its refusal.
+TWICE = "aws-43199517532"
+EACH_TIME = ("outside-email", "control-email", "gateway-every-request")
 MAPPING = pack.load_mapping(os.path.join(ROOT, "mapping", "controls.yaml"))
 
 
@@ -249,7 +254,7 @@ class Results(Case):
         self.refused(self.archive({"e2e-results.json": body}), "no list of checks")
 
     def test_the_real_artifacts_are_read(self):
-        lines = {AWS: 56, GKE: 63, AKS: 21}
+        lines = {AWS: 56, GKE: 63, AKS: 21, TWICE: 121}
         for name, count in lines.items():
             r = pack.read_run(os.path.join(RUNS, name))
             self.assertEqual(len(pack.results_of(r["archive"])[2]), count, name)
@@ -260,7 +265,7 @@ class Judge(Case):
 
     def test_the_real_runs(self):
         want = {AWS: ["sc-7", "sc-7.5", "ac-4", "si-7", "sr-4", "sr-11"], AKS: ["sc-7", "sc-7.5"]}
-        want[GKE] = want[AWS]
+        want[GKE] = want[TWICE] = want[AWS]
         for name, controls in want.items():
             v = self.verdict(os.path.join(RUNS, name))
             self.assertEqual({c: "satisfied" for c in controls}, {c: s["state"] for c, s in v["controls"].items()}, name)
@@ -308,6 +313,48 @@ class Judge(Case):
         v = self.verdict(d)
         self.assertEqual(v["controls"]["sc-7"]["state"], "not-satisfied")
         self.assertIn("1 of the run's lines match, and 2 must", "; ".join(v["controls"]["sc-7"]["why"]))
+
+    def last(self, doc, words):
+        return [c for c in doc["checks"] if c["name"].startswith(words)][-1]
+
+    def test_a_run_that_wrote_a_line_twice(self):
+        v = self.verdict(os.path.join(RUNS, TWICE))
+        self.assertEqual({g: len(v["checks"][g]["lines"]) for g in EACH_TIME}, dict.fromkeys(EACH_TIME, 2))
+        self.assertEqual(v["checks"]["control-email"]["lines"],
+                         ["the harness's control email arrived through the MCP server: yes (control)"] * 2)
+        self.assertEqual((v["controls"]["ac-4"]["state"], v["controls"]["ac-4"]["why"]), ("satisfied", []))
+
+    def test_a_line_one_of_two_times_lost(self):
+        # The plant: the second time through the evals, the control email's line is worded otherwise. The first
+        # still matches, and one line is all at_least asks of it. It must not stand for both times.
+        for g, words in zip(EACH_TIME, ("emails delivered outside", "the harness's control email arrived",
+                                         "every model request went through the gateway")):
+            d = self.run_dir(TWICE)
+
+            def change(doc):
+                self.last(doc, words)["name"] += ", as the next release words it"
+            self.results(d, change)
+            v = self.verdict(d)
+            self.assertEqual(len(v["checks"][g]["lines"]), 1, g)
+            self.assertEqual([c for c, x in v["controls"].items() if x["state"] != "satisfied"], ["ac-4"], g)
+            why = "; ".join(v["controls"]["ac-4"]["why"])
+            self.assertIn(f"{g}: 1 of the run's lines match, and 2 match ", why)
+            self.assertIn("which the run writes beside it each time", why)
+            self.assertEqual(v["failed_lines"], [], g)
+
+    def test_a_second_time_that_is_not_in_the_run(self):
+        # What the rule leaves alone: a run that went through the evals once, as an AWS run with no GPU does and
+        # as the run of 2026-10-22 did. All three lines are there once, and that is the run.
+        d = self.run_dir(TWICE)
+
+        def change(doc):
+            gone = [self.last(doc, words) for words in ("emails delivered outside", "the harness's control email",
+                                                         "every model request went through the gateway")]
+            doc["checks"] = [c for c in doc["checks"] if not any(c is g for g in gone)]
+        self.results(d, change)
+        v = self.verdict(d)
+        self.assertEqual({g: len(v["checks"][g]["lines"]) for g in EACH_TIME}, dict.fromkeys(EACH_TIME, 1))
+        self.assertEqual(v["controls"]["ac-4"]["state"], "satisfied")
 
     def test_a_line_renamed_upstream(self):
         d = self.run_dir()
@@ -395,17 +442,38 @@ class Documents(Case):
                          {"sc-7_smt", "sc-7.5_smt", "ac-4_smt", "si-7_smt", "sr-4_smt", "sr-11_smt"})
 
     def test_every_observation_is_a_line_of_the_run(self):
-        for name in (AWS, GKE, AKS):
+        for name in (AWS, GKE, AKS, TWICE):
             r = pack.read_run(os.path.join(RUNS, name))
-            lines = {c["name"] for c in pack.results_of(r["archive"])[2]}
+            lines = collections.Counter(c["name"] for c in pack.results_of(r["archive"])[2])
             files = pack.render(MAPPING, os.path.join(RUNS, name))
             result = json.loads(files["assessment-results.json"])["assessment-results"]["results"][0]
-            observed = [o["description"] for o in result["observations"]]
-            self.assertTrue(observed and set(observed) <= lines, name)
-            self.assertEqual(len(observed), len(set(observed)), name)
-            uuids = {o["uuid"] for o in result["observations"]}
+            observed = collections.Counter(o["description"] for o in result["observations"])
+            # No line observed that the run does not have, and none more times than the run wrote it.
+            self.assertTrue(observed and not observed - lines, name)
+            uuids = [o["uuid"] for o in result["observations"]]
+            self.assertEqual(len(uuids), len(set(uuids)), name)
             for f in result["findings"]:
-                self.assertTrue({o["observation-uuid"] for o in f["related-observations"]} <= uuids)
+                related = [o["observation-uuid"] for o in f["related-observations"]]
+                self.assertTrue(set(related) <= set(uuids))
+                self.assertEqual(len(related), len(set(related)), name)
+
+    def test_a_line_written_twice_is_two_observations(self):
+        files = pack.render(MAPPING, os.path.join(RUNS, TWICE))
+        result = json.loads(files["assessment-results.json"])["assessment-results"]["results"][0]
+        email = "the harness's control email arrived through the MCP server: yes (control)"
+        mine = [o for o in result["observations"] if o["description"] == email]
+        self.assertEqual(len(mine), 2)
+        self.assertEqual([[p["value"] for p in o["props"] if p["name"] == "occurrence"] for o in mine], [[], ["2"]])
+        ac4 = next(f for f in result["findings"] if f["title"].startswith("AC-4"))
+        # One refusal, and beside it the gateway's answer and three lines written twice: every one of them counted
+        # the same in the finding, in what it relates, and in the summary a person reads.
+        self.assertIn("1 refusal(s) of a violation tried in this run, beside 7 line(s) that had to hold",
+                      ac4["description"])
+        self.assertEqual(len(ac4["related-observations"]), 8)
+        self.assertTrue({o["uuid"] for o in mine} <= {o["observation-uuid"] for o in ac4["related-observations"]})
+        self.assertIn("| AC-4 Information Flow Enforcement | satisfied | 1 | 7 |", files["summary.md"])
+        self.assertEqual(files["summary.md"].count(f"- {email}\n"), 2)
+        self.assertIn("36 of them named by the mapping", result["description"])
 
     def test_related_criteria_are_the_crosswalks_and_that_controls_alone(self):
         # NIST relates A.8.12 to SC-7(10) and A.8.11 to AC-4(23): neither is SC-7's or AC-4's.
@@ -467,7 +535,7 @@ class Gate(Case):
         self.write(path, text.replace(old, new))
 
     def test_the_real_runs_pass(self):
-        for name in (AWS, GKE, AKS):
+        for name in (AWS, GKE, AKS, TWICE):
             code, out = self.gate(self.pack(name))
             self.assertEqual(code, 0, out)
 
@@ -510,7 +578,7 @@ class Gate(Case):
 
     def test_a_pack_judged_by_another_mapping(self):
         evidence = self.pack()
-        self.rewrite(evidence, "mapping.yaml", "version: 1.0.0", "version: 9.9.9")
+        self.rewrite(evidence, "mapping.yaml", f"version: {MAPPING['version']}", "version: 9.9.9")
         code, out = self.gate(evidence)
         self.assertEqual(code, 1, out)
         self.assertIn("FAIL documents mapping.yaml", out)

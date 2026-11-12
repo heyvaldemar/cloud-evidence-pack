@@ -468,11 +468,11 @@
       }
     ],
     "metadata": {
-      "last-modified": "2026-11-11T00:00:00+00:00",
+      "last-modified": "2026-11-12T14:39:03+00:00",
       "oscal-version": "1.2.1",
       "remarks": "Made from mapping/controls.yaml by scripts/component.py. A control is here only where the flagship's own page has the row and a scheduled cloud run shows a violation its check refused. It is not a statement that a system meets a framework.",
       "title": "kubernetes-air-gapped-ai-agent on its scheduled cloud runs, mapped to NIST SP 800-53 Rev. 5.2.0",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     "uuid": "f1e60162-dd81-501c-8ff7-27974f2b0aa0"
   }

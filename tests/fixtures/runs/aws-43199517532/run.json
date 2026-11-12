@@ -1,0 +1,18 @@
+{
+ "conclusion": "success",
+ "created_at": "2026-11-12T10:20:39Z",
+ "event": "schedule",
+ "head_branch": "main",
+ "head_repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "head_sha": "612768c929f2116441084259532cbc993bb9e359",
+ "html_url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532",
+ "id": 43199517532,
+ "name": "The boundary on AWS",
+ "path": ".github/workflows/aws.yml",
+ "repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+ "run_attempt": 1,
+ "run_number": 24,
+ "run_started_at": "2026-11-12T10:20:39Z",
+ "status": "completed",
+ "updated_at": "2026-11-12T12:13:07Z"
+}
