@@ -4,6 +4,7 @@
  "expires_at": "2027-01-28T05:20:45Z",
  "head_sha": "08dd139bef6ffc03ad0cadae2fefa87e38b49ab1",
  "id": 12956552074,
+ "kept": "https://raw.githubusercontent.com/heyvaldemar/kubernetes-air-gapped-ai-agent/cloud-results/aks/41007916564-1/e2e-results-aks.zip",
  "name": "e2e-results-aks",
  "run_id": 41007916564,
  "size_in_bytes": 746,

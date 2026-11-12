@@ -11,7 +11,7 @@ No cloud run keeps a report from Kyverno. Making the flagship report on a cloud 
 
 ## Decision
 
-A repository of its own. It reads the record and the artifact of scheduled runs that already happened, and builds one pack per run from the run's own check lines, with compliance-trestle's models. It has no cluster and no cloud account, and it starts no workflow in the flagship, ever.
+A repository of its own. It reads the record and the results of scheduled runs that already happened, as the flagship signed and kept them (record 2), and builds one pack per run from the run's own check lines, with compliance-trestle's models. It has no cluster and no cloud account, and it starts no workflow in the flagship, ever.
 
 It is not a leg of kubernetes-oscal-evidence, for four reasons:
 

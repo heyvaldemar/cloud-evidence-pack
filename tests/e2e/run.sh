@@ -10,6 +10,8 @@
 #                    the gate must catch it, and for that plant's reason
 #   LIVE=1           the gate also asks GitHub now for the run's record and
 #                    the artifact's digest
+#   SIGNED=1         the gate also has cosign verify the flagship's signature
+#                    on the run's record
 #
 # No cluster and no cloud account: the run already happened. Needs Python
 # 3.11 or later with requirements.lock installed, and curl, cosign and
@@ -36,11 +38,19 @@ case "$PLANT" in
   "")
     python3 scripts/pack.py "$STATE/fetched" "$STATE"
     bash scripts/validate.sh "$STATE/evidence"
-    python3 scripts/gate.py "$STATE/evidence" ${LIVE:+--live}
+    python3 scripts/gate.py "$STATE/evidence" ${LIVE:+--live} ${SIGNED:+--signed}
     ;;
   missing:*|failed:*|uncontrolled:*|renamed:*)
     # The run did something else: the pack is built from it, and the gate
     # must call exactly the controls that rest on it not satisfied.
+    python3 scripts/plant.py "$STATE/fetched" "$PLANT"
+    python3 scripts/pack.py "$STATE/fetched" "$STATE"
+    bash scripts/validate.sh "$STATE/evidence"
+    python3 scripts/gate.py "$STATE/evidence" --plant "$PLANT"
+    ;;
+  forged-record)
+    # The record and the run beside it edited alike: the pack builds, every
+    # rule that reads them agrees, and only cosign can refuse it.
     python3 scripts/plant.py "$STATE/fetched" "$PLANT"
     python3 scripts/pack.py "$STATE/fetched" "$STATE"
     bash scripts/validate.sh "$STATE/evidence"

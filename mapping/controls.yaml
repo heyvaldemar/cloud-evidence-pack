@@ -26,6 +26,10 @@ flagship:
   branch: main
   page: docs/compliance.md
   plants: tests/e2e/plants
+  # Where the flagship keeps each finished cloud run, signed (its ADR 25):
+  # the branch, and the workflow whose identity the signature must carry.
+  results: cloud-results
+  signer: .github/workflows/cloud-results.yml
 
 framework:
   id: nist_800_53

@@ -1,8 +1,8 @@
 # cloud-evidence-pack
 
-Evidence for a control is usually a screenshot or a spreadsheet, and the reader has to trust whoever assembled it. Each pack here carries the file a scheduled cloud run uploaded itself, and the one command that asks GitHub whether it is that file.
+Evidence for a control is usually a screenshot or a spreadsheet, and the reader has to trust whoever assembled it. Each pack here carries the file a scheduled cloud run uploaded itself, signed by the repository that ran the cloud, and the two commands that check it.
 
-[kubernetes-air-gapped-ai-agent](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent) is built on AWS, Google Cloud and Azure on a schedule: a cluster with no way out, tried from inside, then destroyed. This repository reads the record of each of those runs from GitHub, refuses anything that is not a scheduled run on `main` that passed, and turns the run's own check lines into OSCAL assessment results. For each NIST SP 800-53 control: the violation the run tried and was refused, what had to work beside it, and what the control leaves out. One pack per run, validated by [compliance-trestle](https://github.com/oscal-compass/compliance-trestle), signed with cosign.
+[kubernetes-air-gapped-ai-agent](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent) is built on AWS, Google Cloud and Azure on a schedule: a cluster with no way out, tried from inside, then destroyed. Since its [ADR 25](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/main/docs/decisions/0025-each-cloud-runs-results-signed-and-kept.md) the flagship signs each finished run's results and keeps them on a branch. This repository reads them from there with no token, verifies the flagship's signature, refuses anything that is not a scheduled run on `main` that passed, and turns the run's own check lines into OSCAL assessment results. For each NIST SP 800-53 control: the violation the run tried and was refused, what had to work beside it, and what the control leaves out. One pack per run, validated by [compliance-trestle](https://github.com/oscal-compass/compliance-trestle), signed with cosign.
 
 A pack shows what one scheduled run did. It does not say that any system meets a framework, and no assessor has given an opinion on it.
 
@@ -52,15 +52,15 @@ A related criterion stands beside a finding. It is never a finding.
 
 ```mermaid
 flowchart TD
-  run["a scheduled run of aws.yml, gke.yml or aks.yml on the flagship's main"] --> artifact["its artifact, e2e-results-<cloud>, kept 90 days"]
-  artifact --> fetch["fetch.py: the run's record, the artifact as the API gives it, GitHub's sha256 for it, the planted pods at the run's commit"]
-  fetch --> whose["pack.py: is it a scheduled run on main that passed, and is the file the run's?"]
+  run["a scheduled run of aws.yml, gke.yml or aks.yml on the flagship's main"] --> kept["the flagship's cloud-results.yml: the run's record and its results, signed, on the branch cloud-results"]
+  kept --> fetch["fetch.py, with no token: the record, its signature verified for one exact identity, the artifact with the sha256 the record names, the planted pods at the run's commit"]
+  fetch --> whose["pack.py: is it a scheduled run on main that passed, and is everything here what the signed record says?"]
   whose -- no --> refused["refused: no pack, the index lists the run"]
   whose -- yes --> lines["each check the mapping names, looked for by the whole line"]
   mapping["mapping/controls.yaml, on the flagship's own page"] --> lines
   lines --> oscal["assessment plan and results: one observation per line, one finding per control"]
   oscal --> trestle["trestle validate"]
-  trestle --> gate["gate.py: builds the documents again from the pack's own run/, and judges"]
+  trestle --> gate["gate.py: builds the documents again from the pack's own run/, verifies the flagship's signature, and judges"]
   gate --> sign["cosign keyless, as pack.yml at its ref"]
 ```
 
@@ -70,7 +70,7 @@ flowchart TD
 
 A control is satisfied in a pack only when all of these hold:
 
-1. The run is the flagship's, by that cloud's own workflow, started by the schedule, on `main`, complete and passed, and the artifact's sha256 is the digest GitHub reports for it.
+1. Beside the run is the record the flagship's workflow signed, and what is read of the run and of its artifact is exactly what that record says. The run is the flagship's, by that cloud's own workflow, started by the schedule, on `main`, complete and passed, and the artifact's sha256 is the one the signed record names.
 2. Every check the mapping names for that cloud is in the run's results, by the whole line, and passed. A planted pod's line must carry the words the pod's own file expects, read at the run's commit.
 3. At least one of those checks is a refusal, and at least one is something that had to succeed, so a check cannot pass because the environment refuses everything.
 
@@ -80,20 +80,26 @@ The gate does not take a pack's findings on trust. [`scripts/gate.py`](scripts/g
 
 ## Is the file inside the run's?
 
-Ask GitHub, not the pack. Each pack's `summary.md` ends with the two commands for its own artifact; for the Azure run of 2026-11-10 they are:
+The repository that ran the cloud says so, and signed it. The flagship's workflow `cloud-results.yml` writes down each finished run's facts and the sha256 of the results the run uploaded, and signs that record keyless on its main. A pack carries the record, its Sigstore bundle and the file, and each pack's `summary.md` ends with the commands for its own run. For the Azure run of 2026-11-10:
 
 ```sh
-gh api repos/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/artifacts/13761493439 -q .digest
+cosign verify-blob evidence/run/record.json --bundle evidence/run/record.json.sigstore.json \
+  --certificate-identity https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/.github/workflows/cloud-results.yml@refs/heads/main \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 sha256sum evidence/run/e2e-results-aks.zip
 ```
 
-Both say `95f61d15bf2d8f519e5528989f1e3fd6ba37b5d8dc22d2c3c942c834c6334826`. And the run's own record says who started it:
+The identity is one string: that workflow, on main. The second answer is `95f61d15bf2d8f519e5528989f1e3fd6ba37b5d8dc22d2c3c942c834c6334826`, the value `record.json` gives as `artifact.sha256`. The record also says who started the run: the schedule, on `main`, by `.github/workflows/aks.yml`, and that it passed.
+
+Until GitHub drops the artifact, on 2027-02-08 for this one, it gives the same digest to anyone, with no account:
 
 ```sh
-gh api repos/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539 -q '[.event, .head_branch, .path, .conclusion] | join(" ")'
+curl -s https://api.github.com/repos/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/artifacts/13761493439 | grep '"digest"'
 ```
 
-**The limit of this.** GitHub keeps an artifact for 90 days; this one expires on 2027-02-08. After that there is nothing to ask, and what remains is the pack's signature and its entry in Sigstore's log, which show that this repository's workflow, at a named commit, built the pack while the artifact still existed. The cloud runs do not sign their own results yet.
+The signature does not expire with the artifact. The flagship keeps every finished cloud run this way, failed ones too, on its branch [`cloud-results`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/tree/cloud-results).
+
+**What this leaves out.** The record is signed after the run, by another workflow of the same repository, from GitHub's record of the run: it shows the flagship vouching for the file, not the cloud job signing it as it wrote it. And a run the flagship's rule refuses has no record: on 2026-11-11 that was one run by hand, 43101489006, whose artifact held a scratch file.
 
 ## The plants
 
@@ -105,7 +111,9 @@ A gate that has never failed proves nothing. [`scripts/plant.py`](scripts/plant.
 | `failed:<control>` | one of its refusals says the violation got in | the same, and count the failed line |
 | `uncontrolled:<control>` | everything that had to succeed beside the refusals is gone | the same |
 | `renamed:<check>`, one for every check | the flagship renamed one line | the same; never skip it |
-| `forged-results` | one check flipped inside the artifact | refuse the run: the file is not the one GitHub holds |
+| `forged-results` | one check flipped inside the artifact | refuse the run: the file is not the one the signed record names |
+| `forged-record` | the signed record and the run beside it edited alike, so every rule that reads them agrees | refuse it by the signature: cosign does not verify the record |
+| `unsigned`, `no-record`, `record-mismatch` | the signature gone, the record gone, or a run's record that is not the signed one | refuse the run, for that one reason |
 | `forged-findings` | a pack edited to say every control is satisfied, over a violation that got in | fail: the documents are not what the run gives. trestle still reads them |
 | `by-hand`, `branch`, `other-workflow`, `other-repository`, `red-run`, `other-run`, `no-artifact` | a run that is not a scheduled run's own file | refuse it, for that one reason and no other |
 
@@ -127,7 +135,7 @@ A run that exists and has no pack is never reported as missing.
 
 ## What a pack proves, and what it does not
 
-It proves that a named scheduled run of the flagship, on a named cloud, at a named commit, tried the violations listed and was refused each one, beside the things that had to work; that the file saying so is the one that run uploaded; and that the documents were made from that file by this repository's workflow and have not changed since.
+It proves that a named scheduled run of the flagship, on a named cloud, at a named commit, tried the violations listed and was refused each one, beside the things that had to work; that the file saying so is the one the flagship's own workflow signed as that run's results; and that the documents were made from that file by this repository's workflow and have not changed since.
 
 It does not prove:
 
@@ -145,10 +153,10 @@ python3 -m venv .venv && .venv/bin/pip install --require-hashes --no-deps -r req
 export PATH="$PWD/.venv/bin:$PATH"
 bash scripts/catalogs.sh
 bash scripts/validate.sh evidence
-python3 scripts/gate.py evidence --live
+python3 scripts/gate.py evidence --signed --live
 ```
 
-`validate.sh` is trestle's validator over the pack's plan and results. `gate.py` builds the documents again from `evidence/run` and compares; with `--live` it also asks GitHub now for the run's record and the artifact's digest.
+`validate.sh` is trestle's validator over the pack's plan and results. `gate.py` builds the documents again from `evidence/run` and compares; with `--signed` it has cosign verify the flagship's signature on the run's record, and with `--live` it also asks GitHub now for the run's record and the artifact's digest. Neither needs a token; `--signed` needs cosign on the PATH.
 
 ## Quickstart
 
@@ -187,10 +195,10 @@ Runner time on GitHub's hosted runners, and nothing else: no cloud account, no s
 | `mapping/controls.yaml` | The mapping, written for a person: each control, the lines of a run that carry it, what it leaves out |
 | `oscal/component-definition.json` | The same mapping as an OSCAL component definition, made by `scripts/component.py` |
 | `flagship.lock`, `catalogs.lock`, `tools.lock`, `requirements.lock` | What is fetched, and the hash it must have: the flagship's release, NIST's catalog and its crosswalk, the tools, trestle |
-| `scripts/fetch.py`, `pack.py`, `gate.py` | Read a run, build its pack, judge it |
+| `scripts/fetch.py`, `pack.py`, `gate.py` | Read a run from the flagship's signed branch, build its pack, judge it |
 | `scripts/index.py` | Every scheduled run of each cloud, and what became of it |
 | `scripts/plant.py`, `mutate.py`, `validate.sh` | The plants, the rules switched off in turn, the static checks |
-| `tests/fixtures/runs` | Real scheduled runs, byte for byte as GitHub's API gave them |
+| `tests/fixtures/runs` | Real scheduled runs, each with the record the flagship signed, byte for byte as its branch holds them |
 | `tests/e2e/run.sh` | The whole run, as CI runs it |
 
 ## Questions, bugs and changes

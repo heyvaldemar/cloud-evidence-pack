@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """pack.py RUN_DIR OUT_DIR - one scheduled cloud run of the flagship, as OSCAL evidence.
 
-RUN_DIR is what scripts/fetch.py wrote: the run's record, its artifact as
-GitHub's API gave it, and the planted pods at the run's commit. The pack is
-written to OUT_DIR/evidence:
+RUN_DIR is what scripts/fetch.py wrote: the record of the run the flagship
+signed and kept, the run's artifact, and the planted pods at the run's
+commit. The pack is written to OUT_DIR/evidence:
 
   summary.md               the table to read first
   assessment-results.json  one observation per line of the run the mapping
@@ -15,11 +15,16 @@ written to OUT_DIR/evidence:
 
 Three steps, in this order:
 
-1. Whose file this is. The run must be the flagship's, by a cloud's own
-   workflow, started by the schedule, on the flagship's branch, complete and
-   passed; the artifact must be that run's, and the file's sha256 must be
-   the digest GitHub reports for it. Anything else is refused: exit 2, and
-   nothing is written. A run started by hand is never a pack's source.
+1. Whose file this is. Beside the run there must be the record the
+   flagship's own workflow signed, with its signature, and what is read of
+   the run and of its artifact must be exactly what that record says. The
+   run must be the flagship's, by a cloud's own workflow, started by the
+   schedule, on the flagship's branch, complete and passed; the artifact
+   must be that run's, and the file's sha256 must be the one the signed
+   record names. Anything else is refused: exit 2, and nothing is written.
+   A run started by hand is never a pack's source. The signature itself is
+   verified by scripts/fetch.py when the run is read and by scripts/gate.py
+   --signed on the pack: here it is only required to be there.
 2. What the run did. Each check the mapping names for this cloud is looked
    for in the run's e2e-results.json, by the whole line. A planted pod's
    line must carry the words its own file expects, read at the run's commit.
@@ -92,7 +97,12 @@ def read_json(path, what):
 def read_run(run_dir):
     """What fetch.py kept of one run. The artifact and its record are None when the run kept none."""
     r = {"run": read_json(os.path.join(run_dir, "run.json"), "the run's record"),
-         "jobs": [], "artifact": None, "archive": None, "plants": {}}
+         "jobs": [], "artifact": None, "archive": None, "plants": {}, "record": None, "record_sha256": None,
+         "signed": os.path.exists(os.path.join(run_dir, "record.json.sigstore.json"))}
+    if os.path.exists(os.path.join(run_dir, "record.json")):
+        r["record"] = read_json(os.path.join(run_dir, "record.json"), "the record the flagship signed")
+        with open(os.path.join(run_dir, "record.json"), "rb") as f:
+            r["record_sha256"] = sha256(f.read())
     if os.path.exists(os.path.join(run_dir, "jobs.json")):
         r["jobs"] = read_json(os.path.join(run_dir, "jobs.json"), "the run's jobs")
     if os.path.exists(os.path.join(run_dir, "artifact.json")):
@@ -117,6 +127,16 @@ def provenance(mapping, r):
     """(cloud, reasons): why this is not a scheduled run's own file; no reasons when it is."""
     flagship, run, reasons = mapping["flagship"], r["run"], []
     cloud = cloud_of(mapping, run)
+    record = r.get("record")
+    if record is None or not r.get("signed"):
+        reasons.append("no record signed by the flagship is beside the run: the record or its signature is missing")
+        record = None
+    else:
+        if record.get("repository") != flagship["repository"] or record.get("kept_by") != flagship["signer"]:
+            reasons.append(f"the record was kept by {record.get('kept_by')} of {record.get('repository')}, "
+                           f"not by {flagship['signer']} of {flagship['repository']}")
+        if record.get("run") != run:
+            reasons.append("the run's record here is not the one in the record the flagship signed")
     if run.get("repository") != flagship["repository"] or run.get("head_repository") != flagship["repository"]:
         reasons.append(f"a run of {run.get('repository')} from {run.get('head_repository')}, "
                        f"not of {flagship['repository']}")
@@ -140,8 +160,12 @@ def provenance(mapping, r):
     if artifact.get("run_id") != run.get("id") or artifact.get("head_sha") != run.get("head_sha"):
         reasons.append(f"the artifact is run {artifact.get('run_id')}'s at {str(artifact.get('head_sha'))[:7]}, "
                        f"not run {run.get('id')}'s")
+    kept = (record or {}).get("artifact") or {}
+    if record is not None and ("sha256:" + str(kept.get("sha256")) != artifact.get("digest")
+                               or kept.get("id") != artifact.get("id")):
+        reasons.append("the artifact's record here is not the one in the record the flagship signed")
     if artifact.get("digest") != "sha256:" + sha256(archive):
-        reasons.append(f"the file's sha256 is {sha256(archive)}, and GitHub reports {artifact.get('digest')} "
+        reasons.append(f"the file's sha256 is {sha256(archive)}, and the signed record names {artifact.get('digest')} "
                        "for the artifact: it is not the run's file")
     return cloud, reasons
 
@@ -323,21 +347,39 @@ def documents(mapping, cloud, r, verdict, facts):
     blob = f"https://github.com/{flagship['repository']}/blob/{run['head_sha']}"
     selection = {"control-selections": [{"include-controls": [{"control-id": c["control"]} for c in controls]}]}
     title = f"{flagship['repository'].split('/')[1]} on {spec['title']}, scheduled run {run['id']}"
+    signed_as = f"https://github.com/{flagship['repository']}/{flagship['signer']}@refs/heads/{flagship['branch']}"
+    kept_at = artifact.get("kept", "").rsplit("/", 1)[0]
     props = [prop("run", run["html_url"]), prop("cloud", cloud), prop("commit", run["head_sha"]),
              prop("event", run["event"]), prop("workflow", run["path"]), prop("artifact-id", artifact["id"]),
-             prop("artifact-sha256", digest), prop("mapping-version", mapping["version"])]
+             prop("artifact-sha256", digest), prop("record-sha256", r["record_sha256"]),
+             prop("record-signed-as", signed_as), prop("mapping-version", mapping["version"])]
     resources = {
         "run": {"uuid": u("resource/run"), "title": f"Run {run['id']} of {run['path']}",
                 "description": f"The scheduled run this pack was built from: {spec['where']}.",
                 "rlinks": [{"href": run["html_url"]}]},
         "artifact": {"uuid": u("resource/artifact"), "title": f"{artifact['name']}, artifact {artifact['id']}",
-                     "description": ("The run's own results, as GitHub's API gave them. The same bytes are in this "
-                                     f"pack as run/{artifact['name']}.zip; GitHub reports their sha256 for the "
-                                     f"artifact until it expires on {artifact['expires_at'][:10]}."),
-                     "rlinks": [{"href": artifact["url"], "media-type": "application/zip",
+                     "description": ("The run's own results, as the flagship kept them on its branch "
+                                     f"{flagship['results']}. The same bytes are in this pack as "
+                                     f"run/{artifact['name']}.zip, and their sha256 is the one the signed record "
+                                     "names. GitHub reports the same sha256 for the artifact until it expires on "
+                                     f"{artifact['expires_at'][:10]}."),
+                     "rlinks": [{"href": artifact.get("kept") or artifact["url"], "media-type": "application/zip",
+                                 "hashes": [{"algorithm": "SHA-256", "value": digest}]},
+                                {"href": artifact["url"], "media-type": "application/zip",
                                  "hashes": [{"algorithm": "SHA-256", "value": digest}]},
                                 {"href": f"run/{artifact['name']}.zip", "media-type": "application/zip",
                                  "hashes": [{"algorithm": "SHA-256", "value": digest}]}]},
+        "record": {"uuid": u("resource/record"), "title": f"The flagship's signed record of run {run['id']}",
+                   "description": (f"What the flagship's workflow {flagship['signer']} wrote down about the run and "
+                                   "signed keyless on its main: the run's facts and the sha256 of its results. It is "
+                                   "in this pack as run/record.json with its Sigstore bundle, and cosign verifies "
+                                   f"it for the identity {signed_as}."),
+                   "rlinks": [{"href": f"{kept_at}/record.json" if kept_at else "run/record.json",
+                               "media-type": "application/json",
+                               "hashes": [{"algorithm": "SHA-256", "value": r["record_sha256"]}]},
+                              {"href": "run/record.json", "media-type": "application/json",
+                               "hashes": [{"algorithm": "SHA-256", "value": r["record_sha256"]}]},
+                              {"href": "run/record.json.sigstore.json", "media-type": "application/json"}]},
         "page": {"uuid": u("resource/page"), "title": f"{flagship['page']} at the run's commit",
                  "description": ("The flagship is a reference architecture and has no system security plan. Its own "
                                  "page of controls, at the commit the run was made from, stands where a plan would: "
@@ -433,8 +475,8 @@ def documents(mapping, cloud, r, verdict, facts):
             "start": stamp(run["run_started_at"]), "end": when,
             "reviewed-controls": selection, "observations": observations, "findings": findings,
         }],
-        "back-matter": {"resources": [resources["run"], resources["artifact"], resources["page"],
-                                      resources["catalog"]] + related},
+        "back-matter": {"resources": [resources["run"], resources["record"], resources["artifact"],
+                                      resources["page"], resources["catalog"]] + related},
     }}
     return plan, results
 
@@ -493,16 +535,25 @@ def summary(mapping, cloud, r, verdict):
                  "A check that has never failed proves little. On this cloud, by hand, with the resolver's policy "
                  "left off, these failed:", ""]
         text += [f"- `{g}`: [run {s['run']}](https://github.com/{repo}/actions/runs/{s['run']})" for g, s in shown]
+    flagship = mapping["flagship"]
     text += ["", "## Is the file inside the run's?", "",
-             "Ask GitHub, not this pack. Until the artifact expires on "
-             f"{artifact['expires_at'][:10]}, these two answers are the same:", "",
+             "The repository that ran the cloud says so, and signed it. Its workflow wrote down the run's facts and "
+             "the sha256 of the results the run uploaded, and signed that record on its main. Both are in this pack, "
+             "and cosign checks the signature for one exact identity:", "",
              "```sh",
-             f"gh api repos/{mapping['flagship']['repository']}/actions/artifacts/{artifact['id']} -q .digest",
+             "cosign verify-blob evidence/run/record.json --bundle evidence/run/record.json.sigstore.json \\",
+             f"  --certificate-identity https://github.com/{flagship['repository']}/{flagship['signer']}"
+             f"@refs/heads/{flagship['branch']} \\",
+             "  --certificate-oidc-issuer https://token.actions.githubusercontent.com",
              f"sha256sum evidence/run/{artifact['name']}.zip", "```", "",
-             f"Both say `{digest}`. The run's own record says who started it:", "",
+             f"The second answer is `{digest}`, the value `record.json` gives as `artifact.sha256`. The record also "
+             f"says who started the run: `{run['event']}`, on `{run['head_branch']}`, by `{run['path']}`, "
+             f"`{run['conclusion']}`.", "",
+             f"Until GitHub drops the artifact on {artifact['expires_at'][:10]}, GitHub gives the same digest, to "
+             "anyone:", "",
              "```sh",
-             f"gh api repos/{mapping['flagship']['repository']}/actions/runs/{run['id']} "
-             "-q '[.event, .head_branch, .path, .conclusion] | join(\" \")'", "```", ""]
+             f"curl -s https://api.github.com/repos/{flagship['repository']}/actions/artifacts/{artifact['id']} "
+             "| grep '\"digest\"'", "```", ""]
     return "\n".join(text)
 
 

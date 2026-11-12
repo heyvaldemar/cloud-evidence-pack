@@ -24,6 +24,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.environ.get("SCRIPTS_DIR") or os.path.join(ROOT, "scripts")
 sys.path.insert(0, SCRIPTS)
+import fetch  # noqa: E402
 import gate  # noqa: E402
 import pack  # noqa: E402
 import plant  # noqa: E402
@@ -94,6 +95,10 @@ class Provenance(Case):
     def refused(self, change, words, name="run.json", fixture=AKS):
         d = self.run_dir(fixture)
         self.edit(d, name, change)
+        if name == "run.json":
+            # The signed record is made to say the same, as a record of such a run would: the rule on the run
+            # has to catch it alone.
+            self.edit(d, "record.json", lambda record: change(record["run"]))
         reasons = self.reasons(d)
         self.assertEqual(len(reasons), 1, reasons)
         self.assertIn(words, reasons[0])
@@ -160,6 +165,41 @@ class Provenance(Case):
         reasons = self.reasons(d)
         self.assertEqual(len(reasons), 1, reasons)
         self.assertIn("its file is not", reasons[0])
+
+    def one_reason(self, d, words):
+        reasons = self.reasons(d)
+        self.assertEqual(len(reasons), 1, reasons)
+        self.assertIn(words, reasons[0])
+        self.assertEqual(self.build(d)[0], 2)
+
+    def test_no_signature_beside_the_record(self):
+        d = self.run_dir()
+        os.remove(os.path.join(d, "record.json.sigstore.json"))
+        self.one_reason(d, "no record signed by the flagship")
+
+    def test_no_record_from_the_flagship(self):
+        d = self.run_dir()
+        os.remove(os.path.join(d, "record.json"))
+        self.one_reason(d, "no record signed by the flagship")
+
+    def test_a_run_record_that_is_not_the_signed_one(self):
+        # run.json says the run ended a second later than the record the flagship signed says.
+        d = self.run_dir()
+        self.edit(d, "run.json", lambda r: r.update(updated_at="2026-11-10T12:01:45Z"))
+        self.one_reason(d, "the run's record here is not the one in the record the flagship signed")
+
+    def test_an_artifact_record_that_is_not_the_signed_one(self):
+        # The file and its record here agree with each other, and not with what the flagship signed.
+        d = self.run_dir()
+        signed = self.read(os.path.join(d, "record.json"))
+        self.results(d, lambda doc: doc["checks"].pop())
+        self.write(os.path.join(d, "record.json"), signed)
+        self.one_reason(d, "the artifact's record here is not the one in the record the flagship signed")
+
+    def test_a_record_kept_by_another_workflow(self):
+        d = self.run_dir()
+        self.edit(d, "record.json", lambda r: r.update(kept_by=".github/workflows/aks.yml"))
+        self.one_reason(d, "the record was kept by .github/workflows/aks.yml")
 
     def test_no_record_of_the_run(self):
         d = self.run_dir()
@@ -381,10 +421,12 @@ class Documents(Case):
         d = os.path.join(RUNS, AKS)
         r = pack.read_run(d)
         doc = json.loads(pack.render(MAPPING, d)["assessment-results.json"])["assessment-results"]
-        hashes = [h["value"] for res in doc["back-matter"]["resources"] if not res["title"].startswith("Crosswalk")
-                  for l in res["rlinks"] for h in l.get("hashes", [])]
-        self.assertEqual(set(hashes), {pack.sha256(r["archive"])})
-        self.assertEqual(len(hashes), 2)
+        def hashes(title):
+            return [h["value"] for res in doc["back-matter"]["resources"] if title in res["title"]
+                    for l in res["rlinks"] for h in l.get("hashes", [])]
+        self.assertEqual(hashes("e2e-results-aks"), [pack.sha256(r["archive"])] * 3)
+        self.assertEqual(hashes("signed record"), [r["record_sha256"]] * 2)
+        self.assertEqual(r["record_sha256"], pack.sha256(self.read(os.path.join(d, "record.json"), "rb")))
 
     def test_a_pack_holds_the_run_it_was_built_from(self):
         code, evidence, out = self.build(os.path.join(RUNS, AWS))
@@ -520,6 +562,69 @@ class Gate(Case):
         doc = json.loads(self.read(results))
         self.assertEqual([c["state"] for c in doc["checks"]], ["PASS", "PASS", "PASS"])
         self.assertEqual(doc["measured"], ["controls satisfied: 2 of 2"])
+
+
+class Signature(Case):
+    """The flagship's signature on the record: cosign, one exact identity. Needs cosign and Sigstore's trust root."""
+
+    def verify(self, d, identity=None):
+        record = os.path.join(d, "record.json")
+        why = fetch.verify(record, record + ".sigstore.json", identity or fetch.signer(MAPPING))
+        if why and any(w in why for w in ("tuf refresh failed", "error getting live trusted root", "dial tcp",
+                                          "i/o timeout", "cannot be run")):
+            self.fail(f"cosign could not judge: {why}")
+        return why
+
+    def test_the_identity_is_one_string(self):
+        self.assertEqual(fetch.signer(MAPPING), "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/"
+                                                ".github/workflows/cloud-results.yml@refs/heads/main")
+
+    def test_the_committed_records_are_the_flagships(self):
+        fixtures = os.path.dirname(RUNS)
+        for kind in ("runs", "violations"):
+            for name in sorted(os.listdir(os.path.join(fixtures, kind))):
+                self.assertIsNone(self.verify(os.path.join(fixtures, kind, name)), name)
+
+    def test_another_identity_is_refused(self):
+        # The same repository, on main, another workflow: a cloud job's own identity is not the signer's.
+        why = self.verify(os.path.join(RUNS, AKS), fetch.signer(MAPPING).replace("cloud-results.yml", "aks.yml"))
+        self.assertIsNotNone(why)
+
+    def test_a_record_with_one_space_added_is_refused(self):
+        d = self.run_dir()
+        with open(os.path.join(d, "record.json"), "a") as f:
+            f.write(" ")
+        self.assertIsNotNone(self.verify(d))
+
+    def forged(self):
+        d = self.run_dir()
+        plant.apply(MAPPING, d, "forged-record")
+        self.assertEqual(self.reasons(d), [])
+        code, evidence, out = self.build(d)
+        self.assertEqual(code, 0, out)
+        return evidence
+
+    def test_the_gate_checks_the_signature(self):
+        # Record and run edited alike: every rule that reads them agrees, and only the signature can tell.
+        evidence = self.forged()
+        self.assertEqual(self.gate(evidence)[0], 0)
+        code, out = self.gate(evidence, "--signed")
+        self.assertEqual(code, 2, out)
+        self.assertIn("signature on the run's record does not verify", out)
+
+    def test_the_gate_takes_a_record_the_flagship_signed(self):
+        code, evidence, out = self.build(os.path.join(RUNS, AKS))
+        self.assertEqual(code, 0, out)
+        code, out = self.gate(evidence, "--signed")
+        self.assertEqual(code, 0, out)
+        self.assertIn("the flagship's signature on the record verifies", out)
+
+    def test_a_forged_record_under_its_plant(self):
+        self.assertTrue(gate.planted(MAPPING, self.forged(), "forged-record")[0])
+        code, evidence, out = self.build(os.path.join(RUNS, AKS))
+        caught, why = gate.planted(MAPPING, evidence, "forged-record")
+        self.assertFalse(caught, why)
+        self.assertIn("cosign verified", why)
 
 
 class Plants(Case):

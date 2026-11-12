@@ -18,9 +18,14 @@ Exits 0 when none of these, 1 when any, 2 when the pack cannot be read or
 its run/ is not a scheduled run's own file: no evidence is a failure, never
 a pass.
 
+With --signed it also has cosign verify the record of the run the pack
+carries, run/record.json, against its Sigstore bundle, for one exact
+identity: the flagship's cloud-results.yml at refs/heads/main. It exits 2
+when the signature does not verify.
+
 With --live it also asks GitHub now for the run's record and the
 artifact's digest, and exits 2 unless both are what the pack holds. It
-needs the network, and the artifact not yet expired.
+needs no token, the network, and the artifact not yet expired.
 
 With --plant, the run or the pack was broken on purpose (scripts/plant.py),
 and the gate must catch it for the planted reason. It exits 0 only if:
@@ -31,7 +36,10 @@ and the gate must catch it for the planted reason. It exits 0 only if:
   forged-findings
       the documents are not what the run gives;
   the plants on whose file it is
-      run/ is refused, for that plant's one reason and no other.
+      run/ is refused, for that plant's one reason and no other;
+  forged-record
+      the record and the run beside it were edited alike, so every rule
+      that reads them agrees, and cosign must refuse the record.
 
 A plant the gate lets through, or catches for some other reason, exits 1.
 
@@ -49,6 +57,7 @@ from trestle.oscal.assessment_plan import AssessmentPlan
 from trestle.oscal.assessment_results import AssessmentResults
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fetch  # noqa: E402
 import pack  # noqa: E402
 import plant as plants  # noqa: E402
 
@@ -114,15 +123,23 @@ def judge(mapping, verdict, found, differ):
     return failures
 
 
+def signature(mapping, evidence):
+    """Why cosign does not verify the pack's record of the run as the flagship's; None when it does."""
+    record = os.path.join(evidence, "run", "record.json")
+    return fetch.verify(record, record + ".sigstore.json", fetch.signer(mapping))
+
+
 def live(mapping, verdict):
     """Why GitHub's answer now is not what the pack holds; nothing when it is."""
-    import fetch
     repo, run, artifact = mapping["flagship"]["repository"], verdict["run"], verdict["artifact"]
-    now = fetch.run_record(fetch.get_json(f"/repos/{repo}/actions/runs/{run['id']}"))
+    big = 50 * 1024 * 1024
+    now = json.loads(fetch.get(f"{fetch.API}/repos/{repo}/actions/runs/{run['id']}", token=True, limit=big))
+    now["repository"] = (now.get("repository") or {}).get("full_name")
+    now["head_repository"] = (now.get("head_repository") or {}).get("full_name")
     reasons = [f"GitHub says the run's {k} is {now.get(k)}, the pack says {run.get(k)}"
                for k in ("repository", "head_repository", "path", "event", "head_branch", "head_sha", "status",
                          "conclusion", "run_attempt") if now.get(k) != run.get(k)]
-    held = fetch.get_json(f"/repos/{repo}/actions/artifacts/{artifact['id']}")
+    held = json.loads(fetch.get(f"{fetch.API}/repos/{repo}/actions/artifacts/{artifact['id']}", token=True, limit=big))
     if held.get("expired"):
         reasons.append(f"GitHub no longer holds artifact {artifact['id']}: its digest cannot be asked")
     elif held.get("digest") != artifact["digest"]:
@@ -154,6 +171,14 @@ def planted(mapping, evidence, plant):
         return False, f"NOT caught for its own reason: run/ is refused because {e}"
     if plant in plants.PROVENANCE:
         return False, "NOT caught: run/ was taken as a scheduled run's own file"
+    if plant == "forged-record":
+        why = signature(mapping, evidence)
+        if why is None:
+            return False, "NOT caught: cosign verified a record that was edited"
+        if any(w in why for w in ("tuf refresh failed", "error getting live trusted root", "dial tcp", "i/o timeout",
+                                  "cannot be run")):
+            return False, f"could not be judged: {why}"
+        return True, "caught: every rule that reads the record agrees with it, and cosign refuses it"
     if plant == "forged-findings":
         if "assessment-results.json" in differ:
             return True, "caught: the assessment results are not what the pack's own run/ gives"
@@ -175,6 +200,7 @@ def main():
     ap.add_argument("evidence")
     ap.add_argument("--plant")
     ap.add_argument("--live", action="store_true")
+    ap.add_argument("--signed", action="store_true")
     args = ap.parse_args()
     # Always the committed mapping, never the copy inside the pack.
     mapping = pack.load_mapping(MAPPING)
@@ -189,6 +215,9 @@ def main():
     try:
         verdict, differ = rebuilt(mapping, args.evidence)
         found = read(args.evidence)
+        unsigned = signature(mapping, args.evidence) if args.signed else None
+        if unsigned:
+            raise Unreadable(f"the flagship's signature on the run's record does not verify: {unsigned}")
         gone = live(mapping, verdict) if args.live else []
         if gone:
             raise Unreadable("; ".join(gone))
@@ -203,6 +232,7 @@ def main():
     bad = {what for kind, what, _ in failures if kind == "control"}
     print(f"== {verdict['cloud']} run {verdict['run']['id']}: {len(mapped) - len(bad & {c['control'] for c in mapped})} "
           f"of {len(mapped)} controls satisfied, {len(verdict['failed_lines'])} of {verdict['lines']} lines failed"
+          + (", the flagship's signature on the record verifies" if args.signed else "")
           + (", GitHub's record and digest agree" if args.live else ""))
     why = {what: reason for kind, what, reason in failures if kind == "control"}
     emit([{"state": state(c["control"] not in why), "name": f"{c['name']}: {why.get(c['control'], 'satisfied')}"}

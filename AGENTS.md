@@ -20,7 +20,7 @@ A new or changed rule in the builder, the gate or the index ships with a test th
 
 ## The fixtures are real
 
-`tests/fixtures/runs` and `tests/fixtures/violations` hold runs as `scripts/fetch.py` wrote them: the record, and the artifact byte for byte, whose sha256 is the digest GitHub reported. A fixture is never edited; a test changes a copy. A new fixture is fetched, not written.
+`tests/fixtures/runs` and `tests/fixtures/violations` hold runs as `scripts/fetch.py` wrote them: the record the flagship signed with its Sigstore bundle, and the artifact byte for byte, whose sha256 the record names. A fixture is never edited; a test changes a copy. A new fixture is fetched, not written.
 
 ## Pins
 
@@ -28,4 +28,4 @@ The flagship's page by release and archive sha256, verified with cosign and slsa
 
 ## Secrets
 
-None are stored and none are needed beyond the workflow's own token. A download address GitHub signs is followed and never printed.
+None are stored and none are needed: a run is read from the flagship's public branch with no token, and the workflow's own token is sent to GitHub's API for the rate limit alone.

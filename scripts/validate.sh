@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# validate.sh [check...] - the static checks. None needs a cluster, a cloud
-# account or the network once .cache is filled:
+# validate.sh [check...] - the static checks. None needs a cluster or a cloud
+# account. Once .cache is filled, the network is needed for one thing:
+# Sigstore's trust root, which cosign fetches to verify a signature (the
+# fixtures check, the signature tests, the forged-record plant):
 #
 #   component  mapping/controls.yaml names no control, row of the flagship's
 #              page, check or planted pod that is not there, every control
@@ -8,9 +10,11 @@
 #              clouds, and oscal/component-definition.json is what the
 #              mapping gives (scripts/component.py --check)
 #   fixtures   the committed copies of real runs under tests/fixtures/runs
-#              are scheduled runs' own files, by the digest GitHub reported;
-#              and every "shown failing" run the mapping cites did fail on
-#              the line it is cited for (tests/fixtures/violations)
+#              are scheduled runs' own files, each with the record the
+#              flagship signed, and cosign verifies every committed record
+#              for the flagship's one identity; and every "shown failing"
+#              run the mapping cites did fail on the line it is cited for
+#              (tests/fixtures/violations)
 #   images     every container image this repository names is by digest
 #   trestle    compliance-trestle validates the component definition and the
 #              plan and results of a pack built from each committed run
@@ -72,9 +76,18 @@ check_fixtures() {
   python3 - <<'PY'
 import os, re, sys
 sys.path.insert(0, "scripts")
-import pack
+import fetch, pack
 
 mapping, bad = pack.load_mapping(), []
+signed = 0
+for kind in ("runs", "violations"):
+    for name in sorted(os.listdir(os.path.join("tests/fixtures", kind))):
+        record = os.path.join("tests/fixtures", kind, name, "record.json")
+        why = fetch.verify(record, record + ".sigstore.json", fetch.signer(mapping))
+        if why:
+            bad.append(f"tests/fixtures/{kind}/{name}: the record is not signed as {fetch.signer(mapping)}: {why}")
+        else:
+            signed += 1
 runs = sorted(os.listdir("tests/fixtures/runs"))
 for name in runs:
     r = pack.read_run(os.path.join("tests/fixtures/runs", name))
@@ -97,8 +110,10 @@ for check, spec in mapping["checks"].items():
         r = pack.read_run(d)
         if pack.cloud_of(mapping, r["run"]) != cloud or r["run"]["id"] != shown["run"]:
             bad.append(f"{d} is not {cloud} run {shown['run']}")
-        if r["artifact"] is None or r["artifact"].get("digest") != "sha256:" + pack.sha256(r["archive"] or b""):
-            bad.append(f"{d}: the file is not the one GitHub reported for the run")
+        if r["artifact"] is None or r["artifact"].get("digest") != "sha256:" + pack.sha256(r["archive"] or b"") \
+                or r["record"] is None or r["record"].get("run") != r["run"] \
+                or r["record"]["artifact"]["sha256"] != pack.sha256(r["archive"] or b""):
+            bad.append(f"{d}: the run or its file is not what the record the flagship signed says")
             continue
         _, _, checks, _ = pack.results_of(r["archive"])
         if not any(re.fullmatch(shown["line"], c["name"]) and c["passed"] is False for c in checks):
@@ -107,6 +122,7 @@ for check, spec in mapping["checks"].items():
             bad.append(f"{check} on {cloud}: run {shown['run']} has the passing line too")
 print("\n".join(bad) if bad else
       f"{len(runs)} committed runs are scheduled runs' own files, on {len(covered)} clouds; "
+      f"{signed} committed records verify as the flagship's; "
       f"{cited} cited failures are in the runs they are cited from")
 sys.exit(1 if bad else 0)
 PY

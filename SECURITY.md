@@ -24,9 +24,9 @@ The files under `tests/fixtures` are copies of real runs' public artifacts. The 
 
 - The flagship's page of controls is read from its signed release only after cosign and slsa-verifier verify it (`flagship.lock`).
 - NIST's catalog, the command-line tools and compliance-trestle are pinned by sha256 (`catalogs.lock`, `tools.lock`, `requirements.lock`).
-- A run's artifact is taken only when its sha256 is the digest GitHub reports for it.
+- A run is taken only with the record the flagship's workflow signed, verified by cosign for one exact identity, and its artifact only when its sha256 is the one that record names.
 - Actions are pinned by commit SHA and moved by Dependabot.
 
 ## Credentials
 
-None stored. Runs are read with the workflow's own token, and signatures are keyless, from the workflow's own OIDC identity.
+None stored. Runs are read from the flagship's public branch with no token, and this repository's signatures are keyless, from the workflow's own OIDC identity.

@@ -24,6 +24,14 @@ made to agree:
   red-run           the run failed
   other-run         the artifact belongs to another run
   no-artifact       the run kept no artifact
+  unsigned          the record's signature is gone
+  no-record         the record the flagship signed is gone
+  record-mismatch   the run's record beside the signed one says something else
+
+The record and the run were edited alike, so nothing that reads them can
+tell, and only the signature can:
+
+  forged-record     both say the run ended at another time
 
 A pack edited after it was built. DIR is a pack's evidence directory:
 
@@ -51,6 +59,9 @@ PROVENANCE = {
     "red-run": "not a run that passed",
     "other-run": "the artifact is run ",
     "no-artifact": "the run kept no artifact",
+    "unsigned": "no record signed by the flagship",
+    "no-record": "no record signed by the flagship",
+    "record-mismatch": "not the one in the record the flagship signed",
 }
 CONTROL_PLANTS = ("missing", "failed", "uncontrolled")
 
@@ -81,7 +92,7 @@ def every(mapping, cloud):
     controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
     used = dict.fromkeys(g for c in controls for g in checks_on(mapping, cloud, c))
     return ([f"{k}:{c['control']}" for c in controls for k in CONTROL_PLANTS] + [f"renamed:{g}" for g in used]
-            + list(PROVENANCE) + ["forged-findings"])
+            + list(PROVENANCE) + ["forged-findings", "forged-record"])
 
 
 def rewrite_results(directory, artifact, change, agree):
@@ -102,6 +113,15 @@ def rewrite_results(directory, artifact, change, agree):
         f.write(out.getvalue())
     if agree:
         artifact["digest"], artifact["size_in_bytes"] = "sha256:" + pack.sha256(out.getvalue()), len(out.getvalue())
+        # The signed record is made to agree too, as if the flagship had kept this file: the signature no longer
+        # holds, and no rule below the signature can tell.
+        record = os.path.join(directory, "record.json")
+        if os.path.exists(record):
+            doc = json.loads(pack.read_text(record))
+            doc["artifact"]["sha256"], doc["artifact"]["size_in_bytes"] = pack.sha256(out.getvalue()), len(out.getvalue())
+            with open(record, "w", encoding="utf-8") as f:
+                json.dump(doc, f, indent=1, sort_keys=True)
+                f.write("\n")
 
 
 def forge(evidence):
@@ -160,6 +180,12 @@ def apply(mapping, directory, plant):
         os.remove(os.path.join(directory, artifact["name"] + ".zip"))
         os.remove(os.path.join(directory, "artifact.json"))
         artifact = None
+    elif plant == "unsigned":
+        os.remove(os.path.join(directory, "record.json.sigstore.json"))
+    elif plant == "no-record":
+        os.remove(os.path.join(directory, "record.json"))
+    elif plant in ("record-mismatch", "forged-record"):
+        run["updated_at"] = run["updated_at"][:-3] + ("59Z" if not run["updated_at"].endswith("59Z") else "58Z")
     else:
         raise SystemExit(f"unknown plant {plant}")
     for name, doc in (("run.json", run), ("artifact.json", artifact)):
@@ -167,6 +193,16 @@ def apply(mapping, directory, plant):
             with open(os.path.join(directory, name), "w") as f:
                 json.dump(doc, f, indent=1, sort_keys=True)
                 f.write("\n")
+    # A run that is not a scheduled run's is planted in the record too, as a record that says so would read:
+    # the rule on the run must catch it alone. Only record-mismatch leaves the record as it was.
+    record = os.path.join(directory, "record.json")
+    if plant in ("by-hand", "branch", "other-workflow", "other-repository", "red-run", "forged-record") \
+            and os.path.exists(record):
+        doc = json.loads(pack.read_text(record))
+        doc["run"] = run
+        with open(record, "w", encoding="utf-8") as f:
+            json.dump(doc, f, indent=1, sort_keys=True)
+            f.write("\n")
 
 
 def main(argv):

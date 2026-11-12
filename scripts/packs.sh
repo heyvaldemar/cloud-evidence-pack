@@ -4,8 +4,11 @@
 #
 #   MODE=new       (the default) the scheduled runs of the last DAYS days (14)
 #                  that passed and have no pack under HELD_DIR/<cloud>/<run id>
-#   MODE=newest    the newest scheduled run that passed, for each cloud,
-#                  whether or not a pack of it is held: what a release carries
+#   MODE=newest    for each cloud, the newest scheduled run that passed and
+#                  that the flagship's branch holds a signed record of,
+#                  whether or not a pack of it is held: what a release
+#                  carries. A newer run that passed and is not on the branch
+#                  is named, and passed over
 #   MODE=fixtures  the committed copies under tests/fixtures/runs, with no
 #                  network: what a pull request can run
 #
@@ -71,10 +74,10 @@ one() { # one CLOUD RUN_ID [RUN_DIR]
   log="$ROOT/.cache/runs/$cloud-$id.log"
   if [ -n "$dir" ]; then
     state="$ROOT/.cache/run/$(basename "$dir")"
-    RUN_DIR="$dir" bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
+    RUN_DIR="$dir" SIGNED=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
   else
     state="$ROOT/.cache/run/run-$id"
-    RUN="$id" LIVE=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
+    RUN="$id" LIVE=1 SIGNED=1 bash tests/e2e/run.sh >"$log" 2>&1 || rc=$?
   fi
   if [ "$rc" -ne 0 ]; then
     # The builder's or the gate's own last words, never the whole log.
@@ -92,6 +95,10 @@ one() { # one CLOUD RUN_ID [RUN_DIR]
 bash scripts/flagship.sh || exit 2
 bash scripts/catalogs.sh >/dev/null || exit 2
 mkdir -p "$ROOT/.cache/runs/lists"
+kept=""
+if [ "$MODE" != fixtures ]; then
+  kept="$(python3 scripts/fetch.py kept | tr '\n' ' ')" || { echo "the flagship's branch of signed records cannot be read" >&2; exit 2; }
+fi
 for cloud in $(python3 -c 'import sys; sys.path.insert(0, "scripts"); import pack; print(" ".join(pack.load_mapping()["clouds"]))'); do
   if [ "$MODE" = fixtures ]; then
     echo "[]" >"$ROOT/.cache/runs/lists/$cloud.json"
@@ -104,13 +111,19 @@ for cloud in $(python3 -c 'import sys; sys.path.insert(0, "scripts"); import pac
   if ! python3 scripts/fetch.py list "$cloud" >"$ROOT/.cache/runs/lists/$cloud.json"; then
     echo "the scheduled runs of $cloud cannot be listed" >&2; exit 2
   fi
-  ids="$(MODE="$MODE" DAYS="$DAYS" python3 - "$ROOT/.cache/runs/lists/$cloud.json" "$HELD/$cloud" <<'PY'
+  ids="$(MODE="$MODE" DAYS="$DAYS" KEPT="$kept" python3 - "$ROOT/.cache/runs/lists/$cloud.json" "$HELD/$cloud" <<'PY'
 import datetime, json, os, sys
 runs, held = json.load(open(sys.argv[1])), sys.argv[2]
 passed = [r for r in sorted(runs, key=lambda r: r["created_at"], reverse=True)
           if r.get("status") == "completed" and r.get("conclusion") == "success"]
 if os.environ["MODE"] == "newest":
-    passed = passed[:1]
+    kept = set(os.environ["KEPT"].split())
+    for r in passed:
+        if str(r["id"]) in kept:
+            break
+        print(f"passed over: scheduled run {r['id']} of {r['created_at'][:10]} passed, and the flagship's branch "
+              "holds no signed record of it", file=sys.stderr)
+    passed = [r for r in passed if str(r["id"]) in kept][:1]
 else:
     since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=int(os.environ["DAYS"]))
     passed = [r for r in passed

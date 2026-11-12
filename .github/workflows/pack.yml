@@ -9,10 +9,11 @@ name: Pack
 #             planted violation (tests/static/plants.tsv); shellcheck and
 #             actionlint
 # packs       a pack for every scheduled cloud run that passed and has none
-#             yet (scripts/packs.sh): read from GitHub, built, validated by
-#             trestle, judged by the gate, the run's record and the
-#             artifact's digest asked from GitHub again; then signed keyless
-#             with cosign. On a pull request, the committed runs only, and
+#             yet (scripts/packs.sh): read from the flagship's signed branch
+#             with no token, its signature verified for one exact identity,
+#             built, validated by trestle, judged by the gate, which verifies
+#             the signature again and asks GitHub for the run's record and
+#             the artifact's digest; then signed keyless with cosign. On a pull request, the committed runs only, and
 #             nothing is signed. On a release, the newest scheduled run that
 #             passed for each cloud, built on the tag
 # keep        on main: the new packs, their signatures and the index, added
@@ -21,8 +22,10 @@ name: Pack
 # attach      on a release: attached, downloaded again and verified as a
 #             stranger would, each shown a copy with one byte appended
 #
-# No cloud account and no stored secret. The flagship's run history is read
-# with this workflow's own token, and no workflow is ever started there.
+# No cloud account and no stored secret. A run is read from the flagship's
+# public branch cloud-results with no token; this workflow's own token goes
+# to GitHub's API for the list of runs and the rate limit, and no workflow
+# is ever started there.
 on:
   push:
     branches: [main]
@@ -338,5 +341,5 @@ jobs:
           for pack in ../check/cloud-evidence-pack-*.tar.gz; do
             rm -rf unpacked && mkdir unpacked && tar -xzf "$pack" -C unpacked
             bash scripts/validate.sh unpacked/evidence
-            python3 scripts/gate.py unpacked/evidence --live
+            python3 scripts/gate.py unpacked/evidence --signed --live
           done
