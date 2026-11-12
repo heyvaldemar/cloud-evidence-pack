@@ -1,0 +1,197 @@
+{
+  "artifact": {
+    "created_at": "2026-11-10T11:50:04Z",
+    "digest": "sha256:95f61d15bf2d8f519e5528989f1e3fd6ba37b5d8dc22d2c3c942c834c6334826",
+    "expires_at": "2027-02-08T11:41:38Z",
+    "head_sha": "a943f70a2eb3de3d8b5cf88b91700e636f77ba30",
+    "id": 13761493439,
+    "kept": "https://raw.githubusercontent.com/heyvaldemar/kubernetes-air-gapped-ai-agent/cloud-results/aks/42809539539-1/e2e-results-aks.zip",
+    "name": "e2e-results-aks",
+    "run_id": 42809539539,
+    "size_in_bytes": 732,
+    "url": "https://api.github.com/repos/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/artifacts/13761493439"
+  },
+  "checks": {
+    "cluster-dns": {
+      "kind": "control",
+      "lines": [
+        "control: a pod resolves the cluster's own services"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "node-dns-direct": {
+      "kind": "refusal",
+      "lines": [
+        "the node cannot ask a public resolver directly (8.8.8.8)"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "node-dns-outside": {
+      "kind": "refusal",
+      "lines": [
+        "the node cannot resolve example.com (the resolver policy refuses every name but the registry's and the network's own)",
+        "the node cannot resolve example.org (the resolver policy refuses every name but the registry's and the network's own)"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "node-egress-tcp": {
+      "kind": "refusal",
+      "lines": [
+        "the node opens no TCP to 1.1.1.1:443",
+        "the node opens no TCP to 8.8.8.8:53",
+        "the node opens no TCP to 151.101.0.81:443"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "pod-dns-direct": {
+      "kind": "refusal",
+      "lines": [
+        "a pod cannot ask a public resolver directly (8.8.8.8)"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "pod-dns-outside": {
+      "kind": "refusal",
+      "lines": [
+        "a pod cannot resolve example.com (the resolver policy refuses every name but the registry's and the network's own)",
+        "a pod cannot resolve example.org (the resolver policy refuses every name but the registry's and the network's own)"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "pod-egress-tcp": {
+      "kind": "refusal",
+      "lines": [
+        "a pod opens no TCP to 1.1.1.1:443",
+        "a pod opens no TCP to 8.8.8.8:53",
+        "a pod opens no TCP to 151.101.0.81:443"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "registry-dns": {
+      "kind": "control",
+      "lines": [
+        "control: a pod resolves airgap42809539539.azurecr.io to 10.42.17.5, its private endpoint, from the network's own zone",
+        "control: the node resolves airgap42809539539.azurecr.io to 10.42.17.5, its private endpoint, from the network's own zone"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "registry-start": {
+      "kind": "control",
+      "lines": [
+        "control: a pod starts from this run's registry, through its private endpoint, by digest (airgap42809539539.azurecr.io/docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec)"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "registry-tcp": {
+      "kind": "control",
+      "lines": [
+        "control: a pod opens TCP to airgap42809539539.azurecr.io on 443, through its private endpoint",
+        "control: the node opens TCP to airgap42809539539.azurecr.io on 443, through its private endpoint"
+      ],
+      "ok": true,
+      "why": null
+    },
+    "vendor-registry": {
+      "kind": "refusal",
+      "lines": [
+        "a pod opens no TCP to mcr.microsoft.com (150.171.70.10:443), where AKS's own images are published",
+        "the node opens no TCP to mcr.microsoft.com (150.171.70.10:443), where AKS's own images are published"
+      ],
+      "ok": true,
+      "why": null
+    }
+  },
+  "cloud": "aks",
+  "controls": {
+    "sc-7": {
+      "checks": {
+        "control": [
+          "registry-start",
+          "cluster-dns",
+          "registry-dns",
+          "registry-tcp"
+        ],
+        "gate": [],
+        "refusal": [
+          "pod-egress-tcp",
+          "node-egress-tcp",
+          "pod-dns-outside",
+          "node-dns-outside",
+          "pod-dns-direct",
+          "node-dns-direct",
+          "vendor-registry"
+        ]
+      },
+      "related": {
+        "iso-27001-2022": [
+          "A.5.14",
+          "A.8.16",
+          "A.8.20",
+          "A.8.22",
+          "A.8.23"
+        ]
+      },
+      "state": "satisfied",
+      "why": []
+    },
+    "sc-7.5": {
+      "checks": {
+        "control": [
+          "registry-start",
+          "registry-dns",
+          "registry-tcp"
+        ],
+        "gate": [],
+        "refusal": [
+          "pod-egress-tcp",
+          "node-egress-tcp",
+          "pod-dns-outside",
+          "node-dns-outside",
+          "pod-dns-direct",
+          "node-dns-direct",
+          "vendor-registry"
+        ]
+      },
+      "related": {
+        "iso-27001-2022": []
+      },
+      "state": "satisfied",
+      "why": []
+    }
+  },
+  "failed_lines": [],
+  "lines": 21,
+  "mapping_version": "1.0.0",
+  "measured": [],
+  "results_file": {
+    "member": "e2e-results.json",
+    "sha256": "275d61ede267f2803855f017e50c9612289042445ed0c76a38d0751b2adf3fac"
+  },
+  "run": {
+    "conclusion": "success",
+    "created_at": "2026-11-10T11:41:38Z",
+    "event": "schedule",
+    "head_branch": "main",
+    "head_repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+    "head_sha": "a943f70a2eb3de3d8b5cf88b91700e636f77ba30",
+    "html_url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539",
+    "id": 42809539539,
+    "name": "The boundary on AKS",
+    "path": ".github/workflows/aks.yml",
+    "repository": "heyvaldemar/kubernetes-air-gapped-ai-agent",
+    "run_attempt": 1,
+    "run_number": 8,
+    "run_started_at": "2026-11-10T11:41:38Z",
+    "status": "completed",
+    "updated_at": "2026-11-10T12:01:44Z"
+  }
+}

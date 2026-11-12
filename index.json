@@ -1,0 +1,89 @@
+{
+ "written_at": "2026-11-12T01:22:44+00:00",
+ "stale_days": 10,
+ "clouds": {
+  "aws": {
+   "title": "AWS",
+   "workflow": ".github/workflows/aws.yml",
+   "state": "running: last scheduled run 2026-11-05",
+   "missing": false,
+   "packs_in_a_row": 0,
+   "runs": [
+    {
+     "run": 42005832115,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115",
+     "date": "2026-11-05",
+     "commit": "473fa4a",
+     "outcome": "run with no pack",
+     "detail": "the run ended failure"
+    },
+    {
+     "run": 40845619217,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217",
+     "date": "2026-10-29",
+     "commit": "584de51",
+     "outcome": "run with no pack",
+     "detail": "the run ended failure"
+    },
+    {
+     "run": 39744285464,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39744285464",
+     "date": "2026-10-22",
+     "commit": "78fdcc6",
+     "outcome": "not built yet",
+     "detail": ""
+    }
+   ]
+  },
+  "gke": {
+   "title": "Google Cloud",
+   "workflow": ".github/workflows/gke.yml",
+   "state": "running: last scheduled run 2026-11-06",
+   "missing": false,
+   "packs_in_a_row": 1,
+   "runs": [
+    {
+     "run": 42206932411,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411",
+     "date": "2026-11-06",
+     "commit": "473fa4a",
+     "outcome": "pack",
+     "detail": "6 of 6 controls satisfied"
+    },
+    {
+     "run": 41038578800,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800",
+     "date": "2026-10-30",
+     "commit": "6f81741",
+     "outcome": "run with no pack",
+     "detail": "the run ended failure"
+    }
+   ]
+  },
+  "aks": {
+   "title": "Azure",
+   "workflow": ".github/workflows/aks.yml",
+   "state": "running: last scheduled run 2026-11-10",
+   "missing": false,
+   "packs_in_a_row": 2,
+   "runs": [
+    {
+     "run": 42809539539,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539",
+     "date": "2026-11-10",
+     "commit": "a943f70",
+     "outcome": "pack",
+     "detail": "2 of 2 controls satisfied"
+    },
+    {
+     "run": 41626192017,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41626192017",
+     "date": "2026-11-03",
+     "commit": "27ba3c8",
+     "outcome": "pack",
+     "detail": "2 of 2 controls satisfied"
+    }
+   ]
+  }
+ }
+}
