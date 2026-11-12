@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- The release's last job verifies the packs and nothing else. It also took the repository's own source archive, which `release-assets.yml` signs as itself, for a pack, and failed on it in run 43137012297 after the three packs of v1.0.0 had verified. The assets of v1.0.0 are right, and verify from an empty directory.
+
 ## [1.0.0] - 2026-11-12
 
 ### Added

@@ -305,11 +305,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p check && cd check
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p 'cloud-evidence-pack-*' -p 'cloud-evidence-packs.intoto.jsonl'
+          # The packs alone, <cloud>-<run id>: the release also holds this
+          # repository's source archive, cloud-evidence-pack-<tag>.tar.gz,
+          # which release-assets.yml signs as itself. Run 43137012297 took it
+          # for a pack and failed here, after all three packs had verified.
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p 'cloud-evidence-pack-*-*.tar.gz' \
+            -p 'cloud-evidence-pack-*-*.tar.gz.sigstore.json' -p 'cloud-evidence-packs.intoto.jsonl'
           sig=(--certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/pack.yml@refs/tags/$TAG"
                --certificate-oidc-issuer https://token.actions.githubusercontent.com)
           checked=0
-          for pack in cloud-evidence-pack-*.tar.gz; do
+          for pack in cloud-evidence-pack-*-*.tar.gz; do
             cosign verify-blob "$pack" --bundle "$pack.sigstore.json" "${sig[@]}"
             slsa-verifier verify-artifact "$pack" --provenance-path cloud-evidence-packs.intoto.jsonl \
               --source-uri "github.com/$GITHUB_REPOSITORY" --source-tag "$TAG"
@@ -344,7 +349,7 @@ jobs:
           .venv/bin/pip install --quiet --require-hashes --no-deps -r requirements.lock
           export PATH="$PWD/.venv/bin:$PATH"
           bash scripts/catalogs.sh
-          for pack in ../check/cloud-evidence-pack-*.tar.gz; do
+          for pack in ../check/cloud-evidence-pack-*-*.tar.gz; do
             rm -rf unpacked && mkdir unpacked && tar -xzf "$pack" -C unpacked
             bash scripts/validate.sh unpacked/evidence
             python3 scripts/gate.py unpacked/evidence --signed --live
