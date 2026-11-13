@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-13
+
 ### Added
 
 - The scheduled AWS run of 2026-11-12, 43199517532, as a fifth committed copy (`tests/fixtures/runs/aws-43199517532`): 121 lines, and the first run that passed with the flagship's Vault checks, a GPU node, and the agent run a second time on a larger model.
