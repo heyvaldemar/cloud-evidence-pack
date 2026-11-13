@@ -14,7 +14,9 @@ mapping/controls.yaml is refused when it names anything that is not there:
     "# expect:" line disagrees with the kind the mapping gives it;
   - a control on a cloud with no refusal among its checks there, or with
     nothing that had to succeed: such a control could never be satisfied,
-    and one that could be satisfied by refusals alone proves nothing.
+    and one that could be satisfied by refusals alone proves nothing;
+  - a `since` that is not, for clouds the control is mapped on, the id of a
+    run: the first scheduled run of that cloud that carried its lines.
 
 Then it writes oscal/component-definition.json with compliance-trestle's
 models: the flagship as one component, one implemented requirement per
@@ -105,6 +107,11 @@ def problems(mapping, smt, flagship=FLAGSHIP):
         if not c.get("clouds") or set(c["clouds"]) - set(clouds):
             bad.append(f"control {cid}: clouds {c.get('clouds')} are not all clouds of the mapping")
             continue
+        since = c.get("since", {})
+        if not isinstance(since, dict) or set(since) - set(c["clouds"]) or not all(
+                isinstance(n, int) and not isinstance(n, bool) and n > 0 for n in since.values()):
+            bad.append(f"control {cid}: since {since!r} does not name, for clouds it is mapped on, the first run "
+                       f"that carried its lines")
         for cloud in c["clouds"]:
             kinds = {checks[g]["kind"] for g in c["checks"] if cloud in checks[g].get("clouds", [])}
             if "refusal" not in kinds:
@@ -150,6 +157,7 @@ def definition(mapping, catalog_href):
         props += [pack.prop(f"related-{name}", element) for name in mapping.get("crosswalks", {})
                   for element in (pack.crosswalk(mapping, name).get(c["control"]) or ["none"])]
         props += [pack.prop(mapping["checks"][g]["kind"], g) for g in c["checks"]]
+        props += [pack.prop("since", f"{cloud} run {first}") for cloud, first in c.get("since", {}).items()]
         requirements.append({"uuid": u(f"requirement/{c['control']}"), "control-id": c["control"],
                              "description": " ".join(c["implementation"].split()), "props": props,
                              "remarks": "What this leaves out: " + " ".join(c["not_covered"].split())})

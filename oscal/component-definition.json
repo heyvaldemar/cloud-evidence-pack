@@ -428,6 +428,202 @@
                 ],
                 "remarks": "What this leaves out: Checked against a key, with no certificate and no transparency log. Part (b), reporting a counterfeit to anyone, is a process and nothing here does it. The images of the cloud's own node are exempt.",
                 "uuid": "dda98692-7cb7-5c82-857c-c0b840a080c8"
+              },
+              {
+                "control-id": "ac-6",
+                "description": "The records service takes only a credential Vault issues: for 60 seconds, to the MCP server's service account alone, with a scope that has no delete in it. The run asks Vault as the agent, as a neighbour of the MCP server and with the MCP server's wrong token, tries Vault from an agent pod, and sends a delete with a credential the service takes.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "AC-6 Least Privilege"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.5.15"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.2"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "A.8.18"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-agent"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-neighbour"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-api-token"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "agent-to-vault"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-delete"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-server"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "agent-to-mcp"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-through-vault"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "credential-scope"
+                  },
+                  {
+                    "name": "gate",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "credential-lifetime"
+                  },
+                  {
+                    "name": "gate",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-audit-holder"
+                  },
+                  {
+                    "name": "since",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws run 43199517532"
+                  }
+                ],
+                "remarks": "What this leaves out: The records credential alone. The agent's own two tokens, the Kubernetes API token refused at the gateway and the rights of the person the agent acts for are tried in the flagship's daily runs on kind, not in a cloud run; of the person's rights a cloud run holds the evals' count, which this mapping does not name. Quotas and token budgets at the gateway are per agent, not per person (the flagship's gap 1). Scope is by tool and customer, not by field.",
+                "uuid": "6a52b811-d11c-5e81-8603-54ae7a6786c0"
+              },
+              {
+                "control-id": "ia-9",
+                "description": "The records service knows its caller by a credential signed with Vault's key, and checks the signature, issuer, audience, expiry, lifetime and scope itself. Vault issues one only to the MCP server's service account, which logs in with a token for Vault's own audience. The run sends the records service no credential, a random key, the cluster's own token, a credential for another audience, one that lives an hour and an expired one, each beside a credential it takes.",
+                "props": [
+                  {
+                    "name": "page-row",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "IA-9 Service Identification and Authentication"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws"
+                  },
+                  {
+                    "name": "related-iso-27001-2022",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "none"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-no-credential"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-random-key"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-cluster-token"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-other-audience"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-long-lived"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-expired"
+                  },
+                  {
+                    "name": "refusal",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-api-token"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-takes-credential"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "vault-login-server"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "cluster-token-issued"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "other-audience-issued"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "long-lived-issued"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-fresh"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-caller"
+                  },
+                  {
+                    "name": "control",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "records-reasons"
+                  },
+                  {
+                    "name": "since",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "aws run 43199517532"
+                  }
+                ],
+                "remarks": "What this leaves out: The records service and Vault alone. The gateway's check of the agent's token, and the MCP server's check of it with TokenReview, are tried in the flagship's daily runs on kind, not in a cloud run, and no check sends the MCP server a missing or wrong token. Services are identified; people are not (the flagship's gap 1).",
+                "uuid": "76812534-b7b6-5f06-a473-9ca0fe987e98"
               }
             ],
             "source": "https://raw.githubusercontent.com/usnistgov/oscal-content/f0de6d8d8c059d374f15e0ae07508d82e370fc1d/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
@@ -468,11 +664,11 @@
       }
     ],
     "metadata": {
-      "last-modified": "2026-11-12T14:39:03+00:00",
+      "last-modified": "2026-11-13T04:52:30+00:00",
       "oscal-version": "1.2.1",
       "remarks": "Made from mapping/controls.yaml by scripts/component.py. A control is here only where the flagship's own page has the row and a scheduled cloud run shows a violation its check refused. It is not a statement that a system meets a framework.",
       "title": "kubernetes-air-gapped-ai-agent on its scheduled cloud runs, mapped to NIST SP 800-53 Rev. 5.2.0",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "uuid": "f1e60162-dd81-501c-8ff7-27974f2b0aa0"
   }

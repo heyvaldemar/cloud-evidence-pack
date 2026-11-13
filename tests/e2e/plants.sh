@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # plants.sh - a gate that has never failed proves nothing. Every plant
-# scripts/plant.py knows, on every committed copy of a real run, each through
+# scripts/plant.py knows for a run (its cloud's, for the controls that run is
+# asked for), on every committed copy of a real run, each through
 # tests/e2e/run.sh as CI runs one: the run passes only if the gate catches
 # the plant, and for that plant's own reason.
 #
@@ -31,7 +32,7 @@ list="$(mktemp)"
 for dir in tests/fixtures/runs/*/; do
   cloud="$(basename "$dir")"; cloud="${cloud%%-*}"
   [ -n "${CLOUD:-}" ] && [ "$cloud" != "$CLOUD" ] && continue
-  python3 scripts/plant.py all "$cloud" | while read -r plant; do printf '%s\t%s\n' "${dir%/}" "$plant"; done
+  python3 scripts/plant.py all "$dir" | while read -r plant; do printf '%s\t%s\n' "${dir%/}" "$plant"; done
 done >"$list"
 total="$(grep -c . "$list")"
 out="$(mktemp)"

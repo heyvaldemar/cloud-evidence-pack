@@ -9,3 +9,4 @@ Each record states the context, the decision, what it costs, what was considered
 | 3 | [The mapping rests on the flagship's own page, and every control is shown a violation](0003-the-mapping-rests-on-the-flagships-own-page.md) | accepted |
 | 4 | [A leg that is missing is reported as missing](0004-a-leg-that-is-missing-is-reported-as-missing.md) | accepted |
 | 5 | [A line a run writes twice is two lines, and lines written together are counted together](0005-a-line-written-twice-is-two-lines.md) | accepted |
+| 6 | [A control is asked of a run from the first scheduled run that carried its lines](0006-a-control-is-asked-from-the-first-run-that-carried-it.md) | accepted |

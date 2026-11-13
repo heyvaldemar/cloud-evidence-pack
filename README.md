@@ -12,17 +12,17 @@ Five scheduled runs, each read from its own artifact:
 
 | Cloud | Scheduled run | Date, commit | Lines in its results | Mapped controls satisfied |
 |---|---|---|---|---|
-| AWS, an EKS cluster in a VPC with no internet gateway and no NAT | [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532) | 2026-11-12, `612768c` | 121, none failed | 6 of 6 |
+| AWS, an EKS cluster in a VPC with no internet gateway and no NAT | [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532) | 2026-11-12, `612768c` | 121, none failed | 8 of 8 |
 | AWS, three weeks before | [39744285464](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39744285464) | 2026-10-22, `78fdcc6` | 56, none failed | 6 of 6 |
 | Google Cloud, a private GKE cluster in a VPC made without its route to the internet | [42206932411](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411) | 2026-11-06, `473fa4a` | 63, none failed | 6 of 6 |
 | Azure, a network isolated AKS cluster; the boundary alone, with no agent on it | [42809539539](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539) | 2026-11-10, `a943f70` | 21, none failed | 2 of 2 |
 | Azure, the week before | [41626192017](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41626192017) | 2026-11-03, `27ba3c8` | 21, none failed | 2 of 2 |
 
-Between the two AWS runs the scheduled ones failed, [40845619217](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217) and [42005832115](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115), and a failed run gets no pack. The newer AWS run holds 121 lines where the older holds 56, because the flagship grew in those three weeks: Vault, a GPU node, and the agent run a second time on a larger model. The mapping names 36 of the 121. The other 85 are held to one thing: none failed. The first scheduled GKE run, [41038578800](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800), failed before it made anything.
+Between the two AWS runs the scheduled ones failed, [40845619217](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217) and [42005832115](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115), and a failed run gets no pack. The newer AWS run holds 121 lines where the older holds 56, because the flagship grew in those three weeks: Vault, a GPU node, and the agent run a second time on a larger model. The mapping names 60 of the 121. The other 61 are held to one thing: none failed. The first scheduled GKE run, [41038578800](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800), failed before it made anything.
 
 ## The controls
 
-Six controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things are true: the flagship's own page, [`docs/compliance.md`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/v1.9.0/docs/compliance.md), has the row; the check that row names writes a line into the cloud run's results; and the run shows a violation that check refused. A planted pod counts for a control only when that row of the page names it. [`mapping/controls.yaml`](mapping/controls.yaml) has every line in full.
+Eight controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things are true: the flagship's own page, [`docs/compliance.md`](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/blob/v1.9.0/docs/compliance.md), has the row; the check that row names writes a line into the cloud run's results; and the run shows a violation that check refused. A planted pod counts for a control only when that row of the page names it. [`mapping/controls.yaml`](mapping/controls.yaml) has every line in full.
 
 | Control | Where | The violation tried in the run, and refused | Beside it, what had to work | Related in ISO/IEC 27001:2022, by NIST's crosswalk |
 |---|---|---|---|---|
@@ -32,20 +32,24 @@ Six controls of SP 800-53 Rev. 5.2.0. A control is mapped only when three things
 | SI-7 Software, Firmware, and Information Integrity | AWS, Google Cloud | The signed bundle with one byte changed; a model named by tag | The registry held nothing before, and exactly what the bundle carried after | nothing |
 | SR-4 Provenance | AWS, Google Cloud | A signed model with no AI-BOM | The signed model with its AI-BOM is admitted | A.5.21, A.8.30 |
 | SR-11 Component Authenticity | AWS, Google Cloud | Weights nobody signed, weights another key signed, weights from another path, an image the bundle never carried, an image by tag | The signed model is admitted; every running pod runs carried images | nothing |
+| AC-6 Least Privilege | AWS, from the run of 2026-11-12 | Vault asked to log in as the agent, as another service account beside the MCP server, and with the MCP server's token for the Kubernetes API; Vault tried from an agent pod; a delete sent with a credential the records service takes | Vault takes the MCP server's token; the agent pod reaches the MCP server; a record is read with Vault's credential, which names its holder and a scope with no delete in it, and lives 60 seconds | A.5.15, A.8.2, A.8.18 |
+| IA-9 Service Identification and Authentication | AWS, from the run of 2026-11-12 | The records service asked with no credential, a random key, the cluster's own token, a credential for another audience, one that lives an hour and an expired one; Vault asked with the MCP server's token for the Kubernetes API | The records service takes Vault's credential and logs its caller; each credential it refused was really issued; its log gives each refusal a reason of its own | nothing |
 
 Azure has two controls because its run makes the boundary alone: no agent and no admission policies are installed there, so its results hold none of the other lines.
 
+AC-6 and IA-9 rest on the flagship's Vault checks, and a control is asked of a run only from the first scheduled run that carried its lines. On AWS that was [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532), and the mapping names it as their `since`. Every scheduled AWS run from that one on is asked for both, and one that has lost their lines leaves them not satisfied. The run of 2026-10-22 is earlier: its pack has six findings and says the two were not asked of it, because the flagship had no Vault then and nothing is missing from that run ([ADR 6](docs/decisions/0006-a-control-is-asked-from-the-first-run-that-carried-it.md)). Google Cloud's workflow runs the same checks, and the two are named there once a scheduled run has passed with them.
+
 Each cloud's DNS check has also failed once, by hand, with the resolver's policy left off: AWS [39632816543](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39632816543), Google Cloud [40560466605](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40560466605), Azure [41007916564](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41007916564). Copies of those three runs are in [`tests/fixtures/violations`](tests/fixtures/violations), and a static check holds each to the failed line it is cited for.
 
-**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. AC-6 and IA-9: their refusals are the Vault checks. One scheduled cloud run that passed has run them, the AWS run of 2026-11-12, and the mapping does not name them yet. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate. [kubernetes-oscal-evidence](https://github.com/heyvaldemar/kubernetes-oscal-evidence) dropped it for the same reason in its v1.2.0.
+**Not mapped, and why.** AU-2 and CM-7: their gates pass in every run, but no scheduled run shows a violation they refused. SC-7(10): the runs try ways out, they do not test data leaving through a way that is allowed. SC-8, AU-9, RA-5: nothing in a cloud run. CM-14 is not mapped because the flagship's page does not map it: the model is verified against a public key, not a certificate. [kubernetes-oscal-evidence](https://github.com/heyvaldemar/kubernetes-oscal-evidence) dropped it for the same reason in its v1.2.0.
 
-**What every row leaves out** is in the pack beside the row. In short: the boundary is refused, not monitored, and IPv6 is not tried; an email is held to a domain, not to a person; integrity is checked on the way in and not between runs; provenance is a record that is there and signed, not a record shown to be true; authenticity is checked against a key with no transparency log.
+**What every row leaves out** is in the pack beside the row. In short: the boundary is refused, not monitored, and IPv6 is not tried; an email is held to a domain, not to a person; integrity is checked on the way in and not between runs; provenance is a record that is there and signed, not a record shown to be true; authenticity is checked against a key with no transparency log; least privilege and the identity of a service are shown for the records credential alone, not for the agent's own tokens or the person it acts for.
 
 ## Other frameworks
 
 A related criterion stands beside a finding. It is never a finding.
 
-**ISO/IEC 27001:2022.** The last column above is NIST's own crosswalk from SP 800-53 Rev. 5, [OLIR informative reference 155](https://csrc.nist.gov/projects/olir/informative-reference-catalog/details?referenceId=155), version 1.0.0, posted 2023-11-13. It is read from the spreadsheet NIST serves, pinned by sha256 in [`catalogs.lock`](catalogs.lock), and nothing in it is typed by hand: a pack names what NIST relates to a control, and to that control alone. NIST relates A.8.12 to SC-7(10) and not to SC-7, so it is not in SC-7's row. Where NIST relates nothing, as for SC-7(5), SI-7 and SR-11, the pack says "nothing". A crosswalk relates two documents: NIST's page warns against reading its rows as equivalence, and nothing here is a finding about ISO/IEC 27001. One thing met on the way: NIST's page prints the file's hash under the label SHA3-256, and the value is the file's SHA-256.
+**ISO/IEC 27001:2022.** The last column above is NIST's own crosswalk from SP 800-53 Rev. 5, [OLIR informative reference 155](https://csrc.nist.gov/projects/olir/informative-reference-catalog/details?referenceId=155), version 1.0.0, posted 2023-11-13. It is read from the spreadsheet NIST serves, pinned by sha256 in [`catalogs.lock`](catalogs.lock), and nothing in it is typed by hand: a pack names what NIST relates to a control, and to that control alone. NIST relates A.8.12 to SC-7(10) and not to SC-7, so it is not in SC-7's row. Where NIST relates nothing, as for SC-7(5), SI-7, SR-11 and IA-9, the pack says "nothing". A crosswalk relates two documents: NIST's page warns against reading its rows as equivalence, and nothing here is a finding about ISO/IEC 27001. One thing met on the way: NIST's page prints the file's hash under the label SHA3-256, and the value is the file's SHA-256.
 
 **SOC 2.** Not in a pack. AICPA publishes its own mapping of the Trust Services Criteria to NIST 800-53, behind a download button on its site beside a log-in, with no address a build can fetch and pin by hash. A SOC 2 column typed in by hand from it would be what this repository does not do. It can be added the day the file can be pinned as NIST's is.
 
@@ -72,12 +76,12 @@ flowchart TD
 A control is satisfied in a pack only when all of these hold:
 
 1. Beside the run is the record the flagship's workflow signed, and what is read of the run and of its artifact is exactly what that record says. The run is the flagship's, by that cloud's own workflow, started by the schedule, on `main`, complete and passed, and the artifact's sha256 is the one the signed record names.
-2. Every check the mapping names for that cloud is in the run's results, by the whole line, and passed. A planted pod's line must carry the words the pod's own file expects, read at the run's commit.
+2. Every check the mapping names for that cloud is in the run's results, by the whole line, and passed. A planted pod's line must carry the words the pod's own file expects, read at the run's commit. A control with a `since` is asked from that run on, and never of an earlier one.
 3. At least one of those checks is a refusal, and at least one is something that had to succeed, so a check cannot pass because the environment refuses everything.
 
 A line the mapping names and the run lacks leaves its control not satisfied. A line renamed upstream is never skipped, and where a cloud's run writes two lines, one is not enough.
 
-The gate does not take a pack's findings on trust. [`scripts/gate.py`](scripts/gate.py) builds the documents again from the pack's own `run/` and fails if a byte differs, then reads the findings with trestle's models: one per mapped control, each satisfied. It exits 1 on anything short of that, 2 when the pack cannot be read or its `run/` is not a scheduled run's own file. No evidence is a failure, never a pass, and nothing is signed that the gate has not passed.
+The gate does not take a pack's findings on trust. [`scripts/gate.py`](scripts/gate.py) builds the documents again from the pack's own `run/` and fails if a byte differs, then reads the findings with trestle's models: one per control the run is asked for, each satisfied. It exits 1 on anything short of that, 2 when the pack cannot be read or its `run/` is not a scheduled run's own file. No evidence is a failure, never a pass, and nothing is signed that the gate has not passed.
 
 ## Is the file inside the run's?
 
@@ -108,7 +112,7 @@ A gate that has never failed proves nothing. [`scripts/plant.py`](scripts/plant.
 
 | Plant | What it breaks | The gate must |
 |---|---|---|
-| `missing:<control>`, one for every control on every cloud | every refusal line the control rests on is gone from the run | call exactly the controls resting on those lines not satisfied |
+| `missing:<control>`, one for every control a run is asked for | every refusal line the control rests on is gone from the run | call exactly the controls resting on those lines not satisfied |
 | `failed:<control>` | one of its refusals says the violation got in | the same, and count the failed line |
 | `uncontrolled:<control>` | everything that had to succeed beside the refusals is gone | the same |
 | `renamed:<check>`, one for every check | the flagship renamed one line | the same; never skip it |
@@ -172,7 +176,7 @@ bash scripts/flagship.sh
 RUN_DIR=tests/fixtures/runs/aks-42809539539 bash tests/e2e/run.sh
 ```
 
-The pack lands in `.cache/run/aks-42809539539/evidence`; read `summary.md` first. `PLANT=missing:sc-7` (or any plant `python3 scripts/plant.py all aks` prints) breaks it on purpose. `RUN=<run id>` reads a run from the flagship's signed branch instead, with no token.
+The pack lands in `.cache/run/aks-42809539539/evidence`; read `summary.md` first. `PLANT=missing:sc-7` (or any plant `python3 scripts/plant.py all tests/fixtures/runs/aks-42809539539` prints) breaks it on purpose. `RUN=<run id>` reads a run from the flagship's signed branch instead, with no token.
 
 Everything at once, as CI runs it:
 

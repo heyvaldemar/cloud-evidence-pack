@@ -28,6 +28,10 @@ Three steps, in this order:
 2. What the run did. Each check the mapping names for this cloud is looked
    for in the run's e2e-results.json, by the whole line. A planted pod's
    line must carry the words its own file expects, read at the run's commit.
+   A control whose lines this cloud's scheduled runs began to carry later
+   than this run (its `since` in the mapping names the first that did) is
+   not asked of it, and the pack says so; every run from that one on is
+   asked.
 3. What that says of each control. A control is "satisfied" only when every
    check it names is in the run and passed, at least one of them is a
    refusal (a violation tried and turned away in this run) and at least one
@@ -219,6 +223,22 @@ def plant_line(name, text):
     return re.compile(re.escape(f"{name}: refused (") + words + re.escape(")")), "refusal"
 
 
+def first_run(control, cloud):
+    """The first scheduled run of a cloud that carried a control's lines; 0 when every run did."""
+    return (control.get("since") or {}).get(cloud, 0)
+
+
+def asked(mapping, cloud, run):
+    """The controls a run is asked for: those mapped on its cloud, from the first scheduled run there that carried
+    their lines on. The run's id is in the record the flagship signed, and GitHub numbers runs as they start."""
+    return [c for c in mapping["controls"] if cloud in c["clouds"] and run["id"] >= first_run(c, cloud)]
+
+
+def waiting(mapping, cloud, run):
+    """The controls mapped on a run's cloud that the run is too early to be asked for."""
+    return [c for c in mapping["controls"] if cloud in c["clouds"] and run["id"] < first_run(c, cloud)]
+
+
 def needed(spec, cloud):
     """How many of the run's lines a check must match on one cloud."""
     need = spec.get("at_least", 1)
@@ -248,11 +268,14 @@ def match(spec, checks, plants, cloud):
     return lines, None
 
 
-def judge(mapping, cloud, checks, plants):
-    """Every check the mapping names for this cloud, against the run's lines, and each control's state."""
+def judge(mapping, cloud, checks, plants, run):
+    """Every check the mapping names for this cloud and this run, against the run's lines, and each control's state."""
     held = {}
+    # A check that only controls this run is too early for rest on is not looked for in it.
+    early = ({g for c in waiting(mapping, cloud, run) for g in c["checks"]}
+             - {g for c in asked(mapping, cloud, run) for g in c["checks"]})
     for name, spec in mapping["checks"].items():
-        if cloud in spec["clouds"]:
+        if cloud in spec["clouds"] and name not in early:
             lines, why = match(spec, checks, plants, cloud)
             held[name] = {"kind": spec["kind"], "ok": why is None, "why": why, "lines": [c["name"] for c in lines]}
     # Lines the flagship writes side by side: as many of one as of the others, however many times the run wrote them.
@@ -266,9 +289,7 @@ def judge(mapping, cloud, checks, plants):
                 held[g].update(ok=False, why=f"{n} of the run's lines match, and {most} match {beside}, "
                                              f"which the run writes beside it each time")
     controls = {}
-    for c in mapping["controls"]:
-        if cloud not in c["clouds"]:
-            continue
+    for c in asked(mapping, cloud, run):
         mine = [g for g in c["checks"] if g in held]
         reasons = [f"{g}: {held[g]['why']}" for g in mine if not held[g]["ok"]]
         if not any(held[g]["kind"] == "refusal" for g in mine):
@@ -278,6 +299,7 @@ def judge(mapping, cloud, checks, plants):
         controls[c["control"]] = {"state": "not-satisfied" if reasons else "satisfied", "why": reasons,
                                   "checks": {k: [g for g in mine if held[g]["kind"] == k] for k in KINDS}}
     return {"checks": held, "controls": controls,
+            "not_asked": {c["control"]: first_run(c, cloud) for c in waiting(mapping, cloud, run)},
             "lines": len(checks), "failed_lines": [c["name"] for c in checks if c["passed"] is not True]}
 
 
@@ -365,7 +387,8 @@ def documents(mapping, cloud, r, verdict, facts):
         return str(uuid.uuid5(SEED, f"{base}/{what}"))
 
     when = stamp(run["updated_at"])
-    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+    controls = asked(mapping, cloud, run)
+    early = waiting(mapping, cloud, run)
     digest = artifact["digest"].split(":", 1)[1]
     blob = f"https://github.com/{flagship['repository']}/blob/{run['head_sha']}"
     selection = {"control-selections": [{"include-controls": [{"control-id": c["control"]} for c in controls]}]}
@@ -500,6 +523,8 @@ def documents(mapping, cloud, r, verdict, facts):
                             f"its results, {len(observations)} of them named by the mapping."),
             "start": stamp(run["run_started_at"]), "end": when,
             "reviewed-controls": selection, "observations": observations, "findings": findings,
+            # A control the run is too early for has no finding here, and the result says which and why.
+            **({"remarks": not_asked(mapping, cloud, early)} if early else {}),
         }],
         "back-matter": {"resources": [resources["run"], resources["record"], resources["artifact"],
                                       resources["page"], resources["catalog"]] + related},
@@ -507,9 +532,19 @@ def documents(mapping, cloud, r, verdict, facts):
     return plan, results
 
 
+def not_asked(mapping, cloud, early):
+    """One sentence for each first run: the controls a run is too early to be asked for, and since which run."""
+    title, out = mapping["clouds"][cloud]["title"], []
+    for first in sorted({first_run(c, cloud) for c in early}):
+        names = ", ".join(c["name"] for c in early if first_run(c, cloud) == first)
+        out.append(f"Not asked of this run: {names}. The first scheduled run on {title} that carried the lines was "
+                   f"run {first}, and this run is an earlier one.")
+    return " ".join(out)
+
+
 def summary(mapping, cloud, r, verdict):
     run, artifact, spec = r["run"], r["artifact"], mapping["clouds"][cloud]
-    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+    controls = asked(mapping, cloud, run)
     ok = sum(verdict["controls"][c["control"]]["state"] == "satisfied" for c in controls)
     digest = artifact["digest"].split(":", 1)[1]
 
@@ -549,10 +584,14 @@ def summary(mapping, cloud, r, verdict):
                           f"Related in {cw['title']}: nothing.")
                      + f" This is {cw['by']}, a relation between two documents and not a finding."]
     away = [c["name"] for c in mapping["controls"] if cloud not in c["clouds"]]
+    early = waiting(mapping, cloud, run)
+    if away or early:
+        text += ["", "## Not in this pack"]
     if away:
-        text += ["", "## Not in this pack", "",
-                 f"Mapped on other clouds and not here, because this cloud's run does not write their lines: "
-                 f"{', '.join(away)}."]
+        text += ["", f"Mapped on other clouds and not on this one: {', '.join(away)}. The mapping names no line of "
+                     f"this cloud's runs for them."]
+    if early:
+        text += ["", not_asked(mapping, cloud, early)]
     shown = [(g, s["shown_failing"][cloud]) for g, s in mapping["checks"].items()
              if cloud in s.get("shown_failing", {}) and g in verdict["checks"]]
     if shown:
@@ -594,7 +633,7 @@ def render(mapping, run_dir):
     if reasons:
         raise Refused("; ".join(reasons))
     member, member_sha, checks, measured = results_of(r["archive"])
-    verdict = judge(mapping, cloud, checks, r["plants"])
+    verdict = judge(mapping, cloud, checks, r["plants"], r["run"])
     for control, v in verdict["controls"].items():
         v["related"] = {name: crosswalk(mapping, name).get(control, []) for name in mapping.get("crosswalks", {})}
     verdict = {"cloud": cloud, "run": r["run"], "artifact": r["artifact"],

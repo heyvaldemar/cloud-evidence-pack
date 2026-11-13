@@ -37,3 +37,7 @@
 "scripts/fetch.py"	"    if str(run.get(\"id\")) != str(run_id):"	"    if False:"	"gate"	"the rule that a signed record is of the run that was asked for, switched off"
 "mapping/controls.yaml"	"written_together:\n  - [outside-email, control-email, gateway-every-request]\n"	""	"gate"	"the mapping without its rule for lines written together: a line lost one of two times goes unnoticed"
 "mapping/controls.yaml"	"  - [outside-email, control-email, gateway-every-request]\n"	"  - [outside-email, control-email, gateway-every-reply]\n"	"component"	"lines written together that name a check the mapping does not define"
+"mapping/controls.yaml"	"    clouds: [aws]\n    since: {aws: 43199517532}\n    checks: [vault-login-agent,"	"    clouds: [aws]\n    checks: [vault-login-agent,"	"gate"	"a control with no first run named: an earlier run is asked for lines it never wrote"
+"mapping/controls.yaml"	"    since: {aws: 43199517532}\n    checks: [records-no-credential,"	"    since: {aws: 43199517533}\n    checks: [records-no-credential,"	"fixtures"	"a first run with no copy of it here"
+"mapping/controls.yaml"	"    since: {aws: 43199517532}\n    checks: [vault-login-agent,"	"    since: {aws: 39744285464}\n    checks: [vault-login-agent,"	"fixtures"	"a first run that did not carry the control's lines"
+"mapping/controls.yaml"	"    since: {aws: 43199517532}\n    checks: [records-no-credential,"	"    since: {gke: 42206932411}\n    checks: [records-no-credential,"	"component"	"a first run named for a cloud the control is not mapped on"

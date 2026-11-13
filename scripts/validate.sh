@@ -13,9 +13,11 @@
 #   fixtures   the committed copies of real runs under tests/fixtures/runs
 #              are scheduled runs' own files, each with the record the
 #              flagship signed, and cosign verifies every committed record
-#              for the flagship's one identity; and every "shown failing"
-#              run the mapping cites did fail on the line it is cited for
-#              (tests/fixtures/violations)
+#              for the flagship's one identity; every "shown failing" run
+#              the mapping cites did fail on the line it is cited for
+#              (tests/fixtures/violations); and every run a control names
+#              as the first that carried its lines ("since") has a copy
+#              here, in which that control is satisfied
 #   images     every container image this repository names is by digest
 #   trestle    compliance-trestle validates the component definition and the
 #              plan and results of a pack built from each committed run
@@ -127,10 +129,26 @@ for check, spec in mapping["checks"].items():
             bad.append(f"{check} on {cloud}: run {shown['run']} has no failed line matching {shown['line']!r}")
         if any(re.fullmatch(spec["line"], c["name"]) for c in checks):
             bad.append(f"{check} on {cloud}: run {shown['run']} has the passing line too")
+first = 0
+for c in mapping["controls"]:
+    for cloud, run in (c.get("since") or {}).items():
+        first += 1
+        d = f"tests/fixtures/runs/{cloud}-{run}"
+        if not os.path.isdir(d):
+            bad.append(f"{c['control']} on {cloud}: run {run} is named as the first that carried its lines, "
+                       f"and no copy of it is in {d}")
+            continue
+        r = pack.read_run(d)
+        _, _, checks, _ = pack.results_of(r["archive"])
+        v = pack.judge(mapping, cloud, checks, r["plants"], r["run"])["controls"].get(c["control"])
+        if v is None or v["state"] != "satisfied":
+            bad.append(f"{c['control']} on {cloud}: run {run} is named as the first that carried its lines, and "
+                       f"the control is not satisfied in it: {'; '.join(v['why']) if v else 'it is not asked of it'}")
 print("\n".join(bad) if bad else
       f"{len(runs)} committed runs are scheduled runs' own files, on {len(covered)} clouds; "
       f"{signed} committed records verify as the flagship's; "
-      f"{cited} cited failures are in the runs they are cited from")
+      f"{cited} cited failures are in the runs they are cited from; "
+      f"{first} first runs are here, each with its control satisfied")
 sys.exit(1 if bad else 0)
 PY
 }

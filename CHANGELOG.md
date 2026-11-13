@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- AC-6 Least Privilege and IA-9 Service Identification and Authentication, on AWS, from the flagship's Vault checks (`tests/e2e/vault.sh`, its ADR 24). Twenty-four checks, each one line of a run. AC-6: Vault refuses a login by the agent's service account, by another service account beside the MCP server and by the MCP server's token for the Kubernetes API, an agent pod cannot reach Vault, and a delete with a valid credential is refused, beside six lines that had to hold. IA-9: the records service refuses no credential, a random key, the cluster's own token, a credential for another audience, one that lives an hour and an expired one, beside eight lines that had to hold. In the pack of the scheduled AWS run of 2026-11-12, 43199517532, both are satisfied, and 60 of its 121 lines are now named by the mapping. NIST's crosswalk relates A.5.15, A.8.2 and A.8.18 to AC-6 and nothing to IA-9.
+- `since` in the mapping: the first scheduled run of a cloud whose results carried a control's lines. Every run from that one on is asked for the control, and a run that lost its lines leaves it not satisfied. An earlier run is not asked: its pack has no finding for the control and says so in the summary, in the assessment results and under `not_asked` in `verdict.json`. A static check requires a committed copy of every such first run, with the control satisfied in it ([ADR 6](docs/decisions/0006-a-control-is-asked-from-the-first-run-that-carried-it.md)).
+
+### Changed
+
+- The gate requires one finding for each control the run is asked for. A finding for a control the run is too early for fails the pack, as a missing one does from the first run on.
+- Plants are listed for a run, not for a cloud: `python3 scripts/plant.py all DIR` takes a run's directory and prints the plants of the controls that run is asked for. `plant.py all <cloud>` is gone.
+- The index names the mapping beside each pack's count, as in "6 of 6 controls satisfied, by mapping 1.0.1": a pack kept on the branch `packs` was judged by the mapping of the day it was built, and a later mapping may ask more of the same run.
+- The mapping is 1.1.0. The pack of the AWS run of 2026-10-22 keeps its six findings and gains the note that AC-6 and IA-9 were not asked of it.
+
 ## [1.0.1] - 2026-11-13
 
 ### Added

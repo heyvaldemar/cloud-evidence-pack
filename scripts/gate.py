@@ -8,9 +8,10 @@ A pack's findings are not taken on trust. The gate:
    fails if a byte of assessment-plan.json, assessment-results.json,
    verdict.json, summary.md or mapping.yaml differs from what it built;
 2. reads the pack's assessment plan and results with compliance-trestle's
-   models, and fails unless every control the mapping names for the run's
-   cloud has exactly one finding, each "satisfied", and no finding is for
-   anything else;
+   models, and fails unless every control the mapping asks of the run (the
+   controls of its cloud, each from the first scheduled run that carried
+   its lines on) has exactly one finding, each "satisfied", and no finding
+   is for anything else;
 3. has cosign verify the record of the run the pack carries,
    run/record.json, against its Sigstore bundle, for one exact identity:
    the flagship's cloud-results.yml at refs/heads/main;
@@ -119,7 +120,7 @@ def rebuilt(mapping, evidence):
 def judge(mapping, verdict, found, differ):
     """Every failure the gate sees, as (kind, what, why)."""
     failures = [("documents", name, "not what the pack's own run/ and the mapping give") for name in differ]
-    mapped = [c["control"] for c in mapping["controls"] if verdict["cloud"] in c["clouds"]]
+    mapped = [c["control"] for c in pack.asked(mapping, verdict["cloud"], verdict["run"])]
     for control in mapped:
         states = found.get(control, [])
         if not states:
@@ -129,7 +130,7 @@ def judge(mapping, verdict, found, differ):
         elif states[0][0] != "satisfied":
             failures.append(("control", control, f"{states[0][0]}: {states[0][1]}"))
     for control in sorted(set(found) - set(mapped), key=str):
-        failures.append(("control", str(control), "a finding for a control the mapping does not name on this cloud"))
+        failures.append(("control", str(control), "a finding for a control the mapping does not ask of this run"))
     for line in verdict["failed_lines"]:
         failures.append(("line", line, "did not pass in the run"))
     return failures
@@ -195,7 +196,7 @@ def planted(mapping, evidence, plant):
         if "assessment-results.json" in differ:
             return True, "caught: the assessment results are not what the pack's own run/ gives"
         return False, "NOT caught: the edited findings were taken as the run's"
-    _, must = plants.broken(mapping, verdict["cloud"], plant)
+    _, must = plants.broken(mapping, verdict["cloud"], plant, verdict["run"])
     failed = {what for kind, what, _ in judge(mapping, verdict, read(evidence), differ) if kind == "control"}
     if differ:
         return False, f"NOT caught for its own reason: the documents differ from what run/ gives ({', '.join(differ)})"
@@ -242,7 +243,7 @@ def main():
     failures = judge(mapping, verdict, found, differ)
     for kind, what, why in failures:
         print(f"FAIL {kind} {what}: {why}")
-    mapped = [c for c in mapping["controls"] if verdict["cloud"] in c["clouds"]]
+    mapped = pack.asked(mapping, verdict["cloud"], verdict["run"])
     bad = {what for kind, what, _ in failures if kind == "control"}
     print(f"== {verdict['cloud']} run {verdict['run']['id']}: {len(mapped) - len(bad & {c['control'] for c in mapped})} "
           f"of {len(mapped)} controls satisfied, {len(verdict['failed_lines'])} of {verdict['lines']} lines failed"

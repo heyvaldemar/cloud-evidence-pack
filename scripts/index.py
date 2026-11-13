@@ -51,9 +51,11 @@ def outcome(run, packs, cloud):
     if run.get("conclusion") != "success":
         return "run with no pack", f"the run ended {run.get('conclusion')}"
     if os.path.exists(os.path.join(here, "verdict.json")):
-        controls = json.loads(pack.read_text(os.path.join(here, "verdict.json")))["controls"]
+        verdict = json.loads(pack.read_text(os.path.join(here, "verdict.json")))
+        controls = verdict["controls"]
         ok = sum(c["state"] == "satisfied" for c in controls.values())
-        return "pack", f"{ok} of {len(controls)} controls satisfied"
+        # A pack is judged by the mapping of the day it was built, and a later mapping may ask more of the same run.
+        return "pack", f"{ok} of {len(controls)} controls satisfied, by mapping {verdict['mapping_version']}"
     if os.path.exists(os.path.join(here, "refused.txt")):
         return "run with no pack", pack.read_text(os.path.join(here, "refused.txt")).strip()
     return "not built yet", ""

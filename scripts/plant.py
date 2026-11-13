@@ -38,8 +38,9 @@ A pack edited after it was built. DIR is a pack's evidence directory:
   forged-findings   every finding that says not-satisfied is made to say
                     satisfied; the documents still parse
 
-  plant.py all CLOUD   every plant that applies to that cloud, one a line
-  plant.py first DIR   the first control mapped on the cloud of the run in DIR
+  plant.py all DIR     every plant that applies to the run in DIR, one a line:
+                       its cloud's, for the controls that run is asked for
+  plant.py first DIR   the first control the run in DIR is asked for
 """
 import io
 import json
@@ -70,26 +71,26 @@ def checks_on(mapping, cloud, control):
     return [g for g in control["checks"] if cloud in mapping["checks"][g]["clouds"]]
 
 
-def broken(mapping, cloud, plant):
-    """(the checks a plant breaks, the controls that must then be not satisfied) on one cloud."""
+def broken(mapping, cloud, plant, run):
+    """(the checks a plant breaks, the controls that must then be not satisfied) in one run of a cloud."""
     kind, _, what = plant.partition(":")
-    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+    controls = pack.asked(mapping, cloud, run)
     if kind in CONTROL_PLANTS:
         c = next((c for c in controls if c["control"] == what), None)
         if c is None:
-            raise SystemExit(f"plant {plant}: {what} is not mapped on {cloud}")
+            raise SystemExit(f"plant {plant}: {what} is not asked of {cloud} run {run['id']}")
         want = "control" if kind == "uncontrolled" else "refusal"
         groups = [g for g in checks_on(mapping, cloud, c) if mapping["checks"][g]["kind"] == want]
         groups = groups[:1] if kind == "failed" else groups
-    elif kind == "renamed" and cloud in mapping["checks"].get(what, {}).get("clouds", []):
+    elif kind == "renamed" and any(what in checks_on(mapping, cloud, c) for c in controls):
         groups = [what]
     else:
-        raise SystemExit(f"unknown plant {plant} on {cloud}")
+        raise SystemExit(f"unknown plant {plant} in {cloud} run {run['id']}")
     return groups, {c["control"] for c in controls if set(groups) & set(checks_on(mapping, cloud, c))}
 
 
-def every(mapping, cloud):
-    controls = [c for c in mapping["controls"] if cloud in c["clouds"]]
+def every(mapping, cloud, run):
+    controls = pack.asked(mapping, cloud, run)
     used = dict.fromkeys(g for c in controls for g in checks_on(mapping, cloud, c))
     return ([f"{k}:{c['control']}" for c in controls for k in CONTROL_PLANTS] + [f"renamed:{g}" for g in used]
             + list(PROVENANCE) + ["forged-findings", "forged-record"])
@@ -144,7 +145,7 @@ def apply(mapping, directory, plant):
     cloud = pack.cloud_of(mapping, run)
     kind = plant.partition(":")[0]
     if kind in CONTROL_PLANTS + ("renamed",):
-        groups, _ = broken(mapping, cloud, plant)
+        groups, _ = broken(mapping, cloud, plant, run)
         _, _, checks, _ = pack.results_of(r["archive"])
         lines = [l for g in groups for l in pack.match(mapping["checks"][g], checks, r["plants"], cloud)[0]]
         names = [c["name"] for c in lines]
@@ -207,12 +208,15 @@ def apply(mapping, directory, plant):
 
 def main(argv):
     mapping = pack.load_mapping()
-    if len(argv) == 2 and argv[0] == "all" and argv[1] in mapping["clouds"]:
-        print("\n".join(every(mapping, argv[1])))
-        return 0
-    if len(argv) == 2 and argv[0] == "first" and os.path.isdir(argv[1]):
-        cloud = pack.cloud_of(mapping, pack.read_run(argv[1])["run"])
-        print(next(c["control"] for c in mapping["controls"] if cloud in c["clouds"]))
+    if len(argv) == 2 and argv[0] in ("all", "first") and os.path.isdir(argv[1]):
+        run = pack.read_run(argv[1])["run"]
+        cloud = pack.cloud_of(mapping, run)
+        if cloud is None:
+            raise SystemExit(f"plant.py {argv[0]}: the run in {argv[1]} is of no cloud's workflow")
+        if argv[0] == "all":
+            print("\n".join(every(mapping, cloud, run)))
+        else:
+            print(pack.asked(mapping, cloud, run)[0]["control"])
         return 0
     if len(argv) != 2 or not os.path.isdir(argv[0]):
         sys.stderr.write(__doc__)

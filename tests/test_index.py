@@ -37,7 +37,8 @@ class Leg(unittest.TestCase):
         here = os.path.join(self.packs, "aks", str(record["id"]))
         os.makedirs(here, exist_ok=True)
         with open(os.path.join(here, name), "w") as f:
-            f.write(text or json.dumps({"controls": {"sc-7": {"state": "satisfied"}, "sc-7.5": {"state": "satisfied"}}}))
+            f.write(text or json.dumps({"mapping_version": "1.0.1", "controls": {
+                "sc-7": {"state": "satisfied"}, "sc-7.5": {"state": "satisfied"}}}))
 
     def leg(self, runs, now=NOV_11):
         return index.leg(MAPPING, "aks", runs, self.packs, now)
@@ -48,7 +49,9 @@ class Leg(unittest.TestCase):
         l = self.leg([r])
         self.assertFalse(l["missing"])
         self.assertEqual(l["state"], "running: last scheduled run 2026-11-10")
-        self.assertEqual((l["runs"][0]["outcome"], l["runs"][0]["detail"]), ("pack", "2 of 2 controls satisfied"))
+        # A pack kept from an earlier day says which mapping judged it: a later one may ask more of the same run.
+        self.assertEqual((l["runs"][0]["outcome"], l["runs"][0]["detail"]),
+                         ("pack", "2 of 2 controls satisfied, by mapping 1.0.1"))
 
     def test_a_cloud_with_no_run_lately_is_missing(self):
         r = run("11-10")
