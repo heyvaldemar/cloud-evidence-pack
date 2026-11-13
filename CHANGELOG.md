@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-13
+
 ### Added
 
 - AC-6 Least Privilege and IA-9 Service Identification and Authentication on Google Cloud. The scheduled run of 2026-11-13, 43414580093, is the first there that passed with the flagship's Vault checks: 36 of its 99 lines, none of them in the run of the week before. The mapping names the same twenty-four checks as on AWS, and that run as the two controls' `since` for Google Cloud. In its pack both are satisfied, 8 of 8, and 60 of its 99 lines are named by the mapping.
