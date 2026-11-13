@@ -32,7 +32,7 @@ The opposite mistake is worse. If a control were asked only where its lines are 
 
 ## Google Cloud, later the same day
 
-The scheduled Google Cloud run of 2026-11-13, [43414580093](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43414580093), passed with the Vault lines: 36 of its 99, none of them in the run of 2026-11-06. Mapping 1.2.0 names AC-6 and IA-9 on Google Cloud, with that run as their `since` there. The rule did not change: the same twenty-four checks, a committed copy of the run with both controls satisfied in it, and every plant run on it before a pack of it was released.
+The scheduled Google Cloud run of 2026-11-13, [43414580093](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43414580093), passed with the 35 lines of `tests/e2e/vault.sh` among its 99, in the same order as in the AWS run and the same words but for three measured times. None of them is in the run of 2026-11-06. Mapping 1.2.0 names AC-6 and IA-9 on Google Cloud, with that run as their `since` there. The rule did not change: the same twenty-four checks, a committed copy of the run with both controls satisfied in it, and every plant run on it before a pack of it was released.
 
 The second cloud brought out one thing the rule already said and no test had asked: a cloud's first run is its own. AWS had the lines a day before Google Cloud did. A Google Cloud run started between the two is too early for Google Cloud, whatever AWS carried by then, and a mutation that takes the earliest first run of any cloud for every cloud's is now caught by a test.
 
