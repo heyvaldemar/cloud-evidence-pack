@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- AC-6 Least Privilege and IA-9 Service Identification and Authentication on Google Cloud. The scheduled run of 2026-11-13, 43414580093, is the first there that passed with the flagship's Vault checks: 36 of its 99 lines, none of them in the run of the week before. The mapping names the same twenty-four checks as on AWS, and that run as the two controls' `since` for Google Cloud. In its pack both are satisfied, 8 of 8, and 60 of its 99 lines are named by the mapping.
+- That run as a sixth committed copy (`tests/fixtures/runs/gke-43414580093`), fetched from the flagship's signed branch, with every plant of the controls it is asked for run on it.
+- A test and a mutation for what the second cloud brought out: a cloud's first run is its own. A Google Cloud run started after AWS had the lines and before Google Cloud did is too early for Google Cloud.
+- Static plants for a `since` that names one cloud of two, a first run on a second cloud with no copy here or without the lines, and a refusal that is no longer looked for on one of its control's clouds.
+
+### Changed
+
+- The mapping is 1.2.0. The pack of the Google Cloud run of 2026-11-06 keeps its six findings and gains the note that AC-6 and IA-9 were not asked of it.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added

@@ -16,8 +16,8 @@
 # Each control says what it leaves out. Nothing here says that a system
 # meets a framework: a pack shows what one scheduled run did.
 
-version: 1.1.0
-last_modified: "2026-11-13T04:52:30+00:00"
+version: 1.2.0
+last_modified: "2026-11-13T12:10:24+00:00"
 
 # The system whose runs these are, and the hand-made page every control
 # below is a row of. The runs are read from this repository and no other.
@@ -228,129 +228,128 @@ checks:
     says: The gateway's count of answered requests equals the agent's count of requests asked.
 
   # --- the records credential from Vault: tests/e2e/vault.sh ---------------
-  # The flagship's AWS and Google Cloud workflows both run this script. A
-  # scheduled AWS run has passed with it; these lines are named for Google
-  # Cloud once a scheduled run there has. Who may get the credential, and
-  # what it allows:
+  # The flagship's AWS and Google Cloud workflows both run this script, and
+  # a scheduled run of each has passed with it. Who may get the credential,
+  # and what it allows:
   vault-login-agent:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'Vault refuses a login by the agent''s service account, for Vault''s audience \(HTTP (400|403)\)'
     says: The agent's own service account asks Vault to log in, with a token for Vault's audience. Vault refuses it.
   vault-login-neighbour:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'Vault refuses a login by another service account in the MCP server''s namespace \(HTTP (400|403)\)'
     says: Another service account in the MCP server's own namespace asks Vault to log in. Vault refuses it.
   vault-login-api-token:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'Vault refuses a login by the MCP server''s own token for the Kubernetes API \(HTTP (400|403)\)'
     says: The MCP server's service account asks with its token for the Kubernetes API, not the one for Vault's audience. Vault refuses it.
   agent-to-vault:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'an agent pod cannot connect to Vault'
     says: An agent pod tries to open a connection to Vault. It cannot.
   records-delete:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'a delete with a valid credential: 403, no role issues records:delete, and the record is still there'
     says: A delete is sent with a credential the records service takes. It is refused, and the record is still there.
   vault-login-server:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'control: Vault takes the MCP server''s token for its audience'
     says: Vault takes the MCP server's token for Vault's audience, so a refused login is the role's and not a dead Vault's.
   agent-to-mcp:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'control: an agent pod connects to the MCP server'
     says: The same agent pod connects to the MCP server, so the connection it cannot open is the policy's and not a dead probe's.
   records-through-vault:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'control: acting for Dana, the MCP server reads C1001 from the records service with Vault''s credential'
     says: Through the MCP server, a record is read with the credential Vault issued.
   credential-scope:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'Vault''s credential: RS256, its issuer, audience records-api, scope records:read outbox:send, for mcp/mcp-server'
     says: The credential names the MCP server's service account, one audience, and a scope with no delete in it.
   credential-lifetime:
     kind: gate
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the credential lives \d+ s, at most the records service''s limit of 60 s'
     says: The credential's lifetime, read from the credential, is within the 60 seconds the records service allows.
   vault-audit-holder:
     kind: gate
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'Vault''s audit names the service account of every credential it issued: \d+, all to mcp/mcp-server'
     says: Vault's own audit names the MCP server's service account for every credential it issued in the run.
   # What the records service takes as a caller's identity, and what it refuses:
   records-no-credential:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'no credential: 401'
     says: The records service is asked with no credential. It answers 401.
   records-random-key:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'a random key, the old kind of credential: 401'
     says: It is asked with a random key, the kind of credential it took before Vault. 401.
   records-cluster-token:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the cluster''s own token for the audience records-api: 401'
     says: It is asked with a token the cluster itself issued for its audience, not Vault. 401.
   records-other-audience:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'a credential for another audience, signed by Vault''s own key: 401'
     says: It is asked with a credential Vault's key signed for another audience. 401.
   records-long-lived:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'a credential that lives longer than 60 s, though Vault issued it: 401'
     says: It is asked with a credential Vault issued for an hour. 401.
   records-expired:
     kind: refusal
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the first credential, once expired: 401'
     says: It is asked with the run's first credential after it expired. 401.
   records-takes-credential:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'control: the records service takes the credential for GET /records/C1001'
     says: The records service takes the credential Vault issued, so a 401 is its judgment of the credential and not a dead service.
   cluster-token-issued:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'any service account gets a token for the audience records-api from the cluster: the agent''s did'
     says: The cluster did issue a token for the records service's audience, to the agent's service account, so the token it refuses is a real one.
   other-audience-issued:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'plant: Vault issued a credential for the audience reports-api, signed by the records key'
     says: Vault did issue the credential for another audience, with the same key, so its refusal is for the audience.
   long-lived-issued:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'plant: with Vault''s TTL raised, it issued a credential for 3600 s'
     says: Vault did issue the credential that lives an hour, so its refusal is for the lifetime.
   records-fresh:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the TTL put back: a new credential lives 60 s and is taken'
     says: With Vault's lifetime put back, a new credential is taken.
   records-caller:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the records service logs who called: mcp/mcp-server'
     says: The records service's log names the caller by its service account.
   records-reasons:
     kind: control
-    clouds: [aws]
+    clouds: [aws, gke]
     line: 'the records service''s log gives each reason: expired, lives longer than 60 s, no credential, no scope records:delete, not a JWT, signature not by Vault''s key, wrong audience'
     says: The records service's log gives a reason of its own for each refusal.
 
@@ -472,8 +471,8 @@ controls:
   - control: ac-6
     name: AC-6 Least Privilege
     page_row: AC-6 Least Privilege
-    clouds: [aws]
-    since: {aws: 43199517532}
+    clouds: [aws, gke]
+    since: {aws: 43199517532, gke: 43414580093}
     checks: [vault-login-agent, vault-login-neighbour, vault-login-api-token, agent-to-vault, records-delete,
              vault-login-server, agent-to-mcp, records-through-vault, credential-scope, credential-lifetime,
              vault-audit-holder]
@@ -495,8 +494,8 @@ controls:
   - control: ia-9
     name: IA-9 Service Identification and Authentication
     page_row: IA-9 Service Identification and Authentication
-    clouds: [aws]
-    since: {aws: 43199517532}
+    clouds: [aws, gke]
+    since: {aws: 43199517532, gke: 43414580093}
     checks: [records-no-credential, records-random-key, records-cluster-token, records-other-audience,
              records-long-lived, records-expired, vault-login-api-token, records-takes-credential, vault-login-server,
              cluster-token-issued, other-audience-issued, long-lived-issued, records-fresh, records-caller,

@@ -1,0 +1,20 @@
+[
+ {
+  "completed_at": "2026-11-13T11:49:26Z",
+  "conclusion": "success",
+  "name": "Apply, load, check",
+  "started_at": "2026-11-13T11:08:07Z"
+ },
+ {
+  "completed_at": "2026-11-13T11:08:05Z",
+  "conclusion": "skipped",
+  "name": "A branch gets no credential",
+  "started_at": "2026-11-13T11:08:05Z"
+ },
+ {
+  "completed_at": "2026-11-13T11:56:15Z",
+  "conclusion": "success",
+  "name": "Destroy, look for residue, report the cost",
+  "started_at": "2026-11-13T11:49:28Z"
+ }
+]

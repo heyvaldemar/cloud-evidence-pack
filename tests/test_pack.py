@@ -42,9 +42,12 @@ AWS, GKE, AKS = "aws-39744285464", "gke-42206932411", "aks-42809539539"
 # each time writes the three lines AC-4 rests on beside its refusal.
 TWICE = "aws-43199517532"
 EACH_TIME = ("outside-email", "control-email", "gateway-every-request")
-# The same run is the first scheduled AWS run with the flagship's Vault checks, which AC-6 and IA-9 rest on. The
-# run of three weeks before (AWS) is too early to be asked for them.
+# The same run is the first scheduled AWS run with the flagship's Vault checks, which AC-6 and IA-9 rest on, and
+# VAULT is the first on Google Cloud, a day later. The run each cloud had before (AWS, GKE) is too early to be
+# asked for them. FIRST: cloud by cloud, the committed run from before and the first that carried the lines.
+VAULT = "gke-43414580093"
 LATER = ("ac-6", "ia-9")
+FIRST = {"aws": (AWS, TWICE), "gke": (GKE, VAULT)}
 MAPPING = pack.load_mapping(os.path.join(ROOT, "mapping", "controls.yaml"))
 
 
@@ -257,7 +260,7 @@ class Results(Case):
         self.refused(self.archive({"e2e-results.json": body}), "no list of checks")
 
     def test_the_real_artifacts_are_read(self):
-        lines = {AWS: 56, GKE: 63, AKS: 21, TWICE: 121}
+        lines = {AWS: 56, GKE: 63, AKS: 21, TWICE: 121, VAULT: 99}
         for name, count in lines.items():
             r = pack.read_run(os.path.join(RUNS, name))
             self.assertEqual(len(pack.results_of(r["archive"])[2]), count, name)
@@ -269,7 +272,7 @@ class Judge(Case):
     def test_the_real_runs(self):
         want = {AWS: ["sc-7", "sc-7.5", "ac-4", "si-7", "sr-4", "sr-11"], AKS: ["sc-7", "sc-7.5"]}
         want[GKE] = want[AWS]
-        want[TWICE] = want[AWS] + list(LATER)
+        want[TWICE] = want[VAULT] = want[AWS] + list(LATER)
         for name, controls in want.items():
             v = self.verdict(os.path.join(RUNS, name))
             self.assertEqual({c: "satisfied" for c in controls}, {c: s["state"] for c, s in v["controls"].items()}, name)
@@ -437,39 +440,55 @@ class Since(Case):
 
     ONLY = {g for c in MAPPING["controls"] if c["control"] in LATER for g in c["checks"]}
     SAID = "Not asked of this run: AC-6 Least Privilege, IA-9 Service Identification and Authentication."
+    SINCE = next(c for c in MAPPING["controls"] if c["control"] == "ac-6")["since"]
 
     def test_an_earlier_run_is_not_asked(self):
-        # The AWS run of 2026-10-22 is from before the flagship's Vault checks. Nothing is missing from it, and
-        # its pack says which controls it was not asked for instead of calling them failures.
-        files = pack.render(MAPPING, os.path.join(RUNS, AWS))
-        v = json.loads(files["verdict.json"])
-        self.assertEqual(v["not_asked"], dict.fromkeys(LATER, 43199517532))
-        self.assertFalse(set(LATER) & set(v["controls"]))
-        self.assertEqual({c["state"] for c in v["controls"].values()}, {"satisfied"})
-        # None of their lines is looked for in it, so none is reported as lacking.
-        self.assertFalse(self.ONLY & set(v["checks"]))
-        result = json.loads(files["assessment-results.json"])["assessment-results"]["results"][0]
-        self.assertFalse({f["target"]["target-id"] for f in result["findings"]} & {"ac-6_smt", "ia-9_smt"})
-        self.assertIn(self.SAID, result.get("remarks", ""))
-        self.assertIn("run 43199517532, and this run is an earlier one", result.get("remarks", ""))
-        self.assertIn(self.SAID, files["summary.md"])
-        self.assertIn("6 of 6 mapped controls satisfied", files["summary.md"])
+        # The AWS run of 2026-10-22 and the Google Cloud run of 2026-11-06 are from before the flagship's Vault
+        # checks. Nothing is missing from them, and each pack says which controls its run was not asked for
+        # instead of calling them failures.
+        for cloud, (early, _) in FIRST.items():
+            files = pack.render(MAPPING, os.path.join(RUNS, early))
+            v = json.loads(files["verdict.json"])
+            self.assertEqual(v["not_asked"], dict.fromkeys(LATER, self.SINCE[cloud]), cloud)
+            self.assertFalse(set(LATER) & set(v["controls"]), cloud)
+            self.assertEqual({c["state"] for c in v["controls"].values()}, {"satisfied"}, cloud)
+            # None of their lines is looked for in it, so none is reported as lacking.
+            self.assertFalse(self.ONLY & set(v["checks"]), cloud)
+            result = json.loads(files["assessment-results.json"])["assessment-results"]["results"][0]
+            self.assertFalse({f["target"]["target-id"] for f in result["findings"]} & {"ac-6_smt", "ia-9_smt"}, cloud)
+            self.assertIn(self.SAID, result.get("remarks", ""), cloud)
+            self.assertIn(f"The first scheduled run on {MAPPING['clouds'][cloud]['title']} that carried the lines "
+                          f"was run {self.SINCE[cloud]}, and this run is an earlier one",
+                          result.get("remarks", ""), cloud)
+            self.assertIn(self.SAID, files["summary.md"], cloud)
+            self.assertIn("6 of 6 mapped controls satisfied", files["summary.md"], cloud)
 
     def test_the_first_run_and_every_later_one_are_asked(self):
-        first = next(c for c in MAPPING["controls"] if c["control"] == "ac-6")["since"]["aws"]
-        self.assertEqual(json.loads(self.read(os.path.join(RUNS, TWICE, "run.json")))["id"], first)
+        for cloud, (_, name) in FIRST.items():
+            first = self.SINCE[cloud]
+            self.assertEqual(json.loads(self.read(os.path.join(RUNS, name, "run.json")))["id"], first, cloud)
 
-        def asked(run):
-            return [c["control"] for c in pack.asked(MAPPING, "aws", {"id": run})]
-        self.assertNotIn("ac-6", asked(first - 1))
-        self.assertIn("ac-6", asked(first))
-        self.assertIn("ac-6", asked(first + 1))
-        self.assertEqual([c["control"] for c in pack.waiting(MAPPING, "aws", {"id": first - 1})], list(LATER))
-        self.assertEqual(pack.waiting(MAPPING, "aws", {"id": first}), [])
-        files = pack.render(MAPPING, os.path.join(RUNS, TWICE))
-        self.assertEqual(json.loads(files["verdict.json"])["not_asked"], {})
-        self.assertNotIn("Not asked of this run", files["summary.md"])
-        self.assertIn("8 of 8 mapped controls satisfied", files["summary.md"])
+            def asked(run):
+                return [c["control"] for c in pack.asked(MAPPING, cloud, {"id": run})]
+            self.assertNotIn("ac-6", asked(first - 1), cloud)
+            self.assertIn("ac-6", asked(first), cloud)
+            self.assertIn("ac-6", asked(first + 1), cloud)
+            self.assertEqual([c["control"] for c in pack.waiting(MAPPING, cloud, {"id": first - 1})], list(LATER),
+                             cloud)
+            self.assertEqual(pack.waiting(MAPPING, cloud, {"id": first}), [], cloud)
+            files = pack.render(MAPPING, os.path.join(RUNS, name))
+            self.assertEqual(json.loads(files["verdict.json"])["not_asked"], {}, cloud)
+            self.assertNotIn("Not asked of this run", files["summary.md"], cloud)
+            self.assertIn("8 of 8 mapped controls satisfied", files["summary.md"], cloud)
+
+    def test_each_cloud_has_its_own_first_run(self):
+        # AWS had the lines a day before Google Cloud did. A Google Cloud run started between the two is too early
+        # for Google Cloud, whatever AWS carried by then, and an AWS run of the same id is asked.
+        self.assertLess(self.SINCE["aws"], self.SINCE["gke"])
+        between = {"id": self.SINCE["aws"] + 1}
+        self.assertEqual([c["control"] for c in pack.waiting(MAPPING, "gke", between)], list(LATER))
+        self.assertFalse(set(LATER) & {c["control"] for c in pack.asked(MAPPING, "gke", between)})
+        self.assertEqual(pack.waiting(MAPPING, "aws", between), [])
 
     def test_a_control_with_no_since_is_asked_of_every_run(self):
         self.assertEqual([c["control"] for c in pack.asked(MAPPING, "aks", {"id": 1})], ["sc-7", "sc-7.5"])
@@ -478,28 +497,31 @@ class Since(Case):
     def test_a_later_run_that_lost_the_lines(self):
         # What `since` must never hide: from the first run on, a run with none of a control's lines is a run in
         # which the control is not satisfied, never one that is too early to be asked.
-        d = self.run_dir(TWICE)
-        lines = {l for g in self.ONLY for l in self.verdict(d)["checks"][g]["lines"]}
-        self.assertEqual(len(lines), len(self.ONLY))
+        for cloud, (_, name) in FIRST.items():
+            d = self.run_dir(name)
+            lines = {l for g in self.ONLY for l in self.verdict(d)["checks"][g]["lines"]}
+            self.assertEqual(len(lines), len(self.ONLY), cloud)
 
-        def change(doc):
-            doc["checks"] = [c for c in doc["checks"] if c["name"] not in lines]
-        self.results(d, change)
-        v = self.verdict(d)
-        self.assertEqual(v["not_asked"], {})
-        self.assertEqual({c: s["state"] for c, s in v["controls"].items() if s["state"] != "satisfied"},
-                         dict.fromkeys(LATER, "not-satisfied"))
-        self.assertIn("vault-login-agent: 0 of the run's lines match, and 1 must", v["controls"]["ac-6"]["why"])
-        self.assertEqual(v["failed_lines"], [])
+            def change(doc):
+                doc["checks"] = [c for c in doc["checks"] if c["name"] not in lines]
+            self.results(d, change)
+            v = self.verdict(d)
+            self.assertEqual(v["not_asked"], {}, cloud)
+            self.assertEqual({c: s["state"] for c, s in v["controls"].items() if s["state"] != "satisfied"},
+                             dict.fromkeys(LATER, "not-satisfied"), cloud)
+            self.assertIn("vault-login-agent: 0 of the run's lines match, and 1 must", v["controls"]["ac-6"]["why"],
+                          cloud)
+            self.assertEqual(v["failed_lines"], [], cloud)
 
     def test_each_rests_on_refusals_beside_what_had_to_succeed(self):
-        v = self.verdict(os.path.join(RUNS, TWICE))
-        self.assertEqual({c: {k: len(g) for k, g in v["controls"][c]["checks"].items()} for c in LATER},
-                         {"ac-6": {"refusal": 5, "control": 4, "gate": 2},
-                          "ia-9": {"refusal": 7, "control": 8, "gate": 0}})
-        # Each of their checks is one line of the run, and a line stands for one check.
-        lines = [l for g in self.ONLY for l in v["checks"][g]["lines"]]
-        self.assertEqual((len(lines), len(set(lines))), (len(self.ONLY), len(self.ONLY)))
+        for cloud, (_, name) in FIRST.items():
+            v = self.verdict(os.path.join(RUNS, name))
+            self.assertEqual({c: {k: len(g) for k, g in v["controls"][c]["checks"].items()} for c in LATER},
+                             {"ac-6": {"refusal": 5, "control": 4, "gate": 2},
+                              "ia-9": {"refusal": 7, "control": 8, "gate": 0}}, cloud)
+            # Each of their checks is one line of the run, and a line stands for one check.
+            lines = [l for g in self.ONLY for l in v["checks"][g]["lines"]]
+            self.assertEqual((len(lines), len(set(lines))), (len(self.ONLY), len(self.ONLY)), cloud)
 
 
 class Documents(Case):
@@ -511,7 +533,8 @@ class Documents(Case):
 
     def test_every_finding_names_the_catalogs_own_statement(self):
         six = {"sc-7_smt", "sc-7.5_smt", "ac-4_smt", "si-7_smt", "sr-4_smt", "sr-11_smt"}
-        for name, want in ((AWS, six), (TWICE, six | {"ac-6_smt", "ia-9_smt"})):
+        eight = six | {"ac-6_smt", "ia-9_smt"}
+        for name, want in ((AWS, six), (GKE, six), (TWICE, eight), (VAULT, eight)):
             files = pack.render(MAPPING, os.path.join(RUNS, name))
             findings = json.loads(files["assessment-results.json"])["assessment-results"]["results"][0]["findings"]
             self.assertEqual({f["target"]["target-id"] for f in findings}, want, name)
@@ -520,7 +543,7 @@ class Documents(Case):
             self.assertEqual({c["control-id"] + "_smt" for c in reviewed}, want, name)
 
     def test_every_observation_is_a_line_of_the_run(self):
-        for name in (AWS, GKE, AKS, TWICE):
+        for name in (AWS, GKE, AKS, TWICE, VAULT):
             r = pack.read_run(os.path.join(RUNS, name))
             lines = collections.Counter(c["name"] for c in pack.results_of(r["archive"])[2])
             files = pack.render(MAPPING, os.path.join(RUNS, name))
@@ -568,9 +591,10 @@ class Documents(Case):
         hashes = [h["value"] for res in doc["back-matter"]["resources"] if res["title"].startswith("Crosswalk")
                   for l in res["rlinks"] for h in l.get("hashes", [])]
         self.assertEqual(hashes, ["e631de234a1fac057991773f015c221226940540f5602e1b70a3768eaff5cbd9"])
-        later = self.verdict(os.path.join(RUNS, TWICE))["controls"]
-        self.assertEqual({c: later[c]["related"]["iso-27001-2022"] for c in LATER},
-                         {"ac-6": ["A.5.15", "A.8.2", "A.8.18"], "ia-9": []})
+        for name in (TWICE, VAULT):
+            later = self.verdict(os.path.join(RUNS, name))["controls"]
+            self.assertEqual({c: later[c]["related"]["iso-27001-2022"] for c in LATER},
+                             {"ac-6": ["A.5.15", "A.8.2", "A.8.18"], "ia-9": []}, name)
 
     def test_the_artifacts_hash_is_the_files(self):
         d = os.path.join(RUNS, AKS)
@@ -616,7 +640,7 @@ class Gate(Case):
         self.write(path, text.replace(old, new))
 
     def test_the_real_runs_pass(self):
-        for name, said in ((AWS, "6 of 6"), (GKE, "6 of 6"), (AKS, "2 of 2"), (TWICE, "8 of 8")):
+        for name, said in ((AWS, "6 of 6"), (GKE, "6 of 6"), (AKS, "2 of 2"), (TWICE, "8 of 8"), (VAULT, "8 of 8")):
             code, out = self.gate(self.pack(name))
             self.assertEqual(code, 0, out)
             self.assertIn(f": {said} controls satisfied, 0 of ", out)
@@ -691,14 +715,16 @@ class Gate(Case):
         self.assertEqual([(k, w) for k, w, _ in gate.judge(MAPPING, v, found, [])], [("control", "sr-11")])
 
     def test_a_finding_for_a_control_the_run_is_too_early_for(self):
-        v = self.verdict(os.path.join(RUNS, AWS))
-        found = {c: [("satisfied", "")] for c in list(v["controls"]) + ["ac-6"]}
-        self.assertEqual([(k, w) for k, w, _ in gate.judge(MAPPING, v, found, [])], [("control", "ac-6")])
+        for early, _ in FIRST.values():
+            v = self.verdict(os.path.join(RUNS, early))
+            found = {c: [("satisfied", "")] for c in list(v["controls"]) + ["ac-6"]}
+            self.assertEqual([(k, w) for k, w, _ in gate.judge(MAPPING, v, found, [])], [("control", "ac-6")], early)
 
     def test_a_later_run_with_no_finding_for_it(self):
-        v = self.verdict(os.path.join(RUNS, TWICE))
-        found = {c: [("satisfied", "")] for c in v["controls"] if c != "ia-9"}
-        self.assertEqual([(k, w) for k, w, _ in gate.judge(MAPPING, v, found, [])], [("control", "ia-9")])
+        for _, first in FIRST.values():
+            v = self.verdict(os.path.join(RUNS, first))
+            found = {c: [("satisfied", "")] for c in v["controls"] if c != "ia-9"}
+            self.assertEqual([(k, w) for k, w, _ in gate.judge(MAPPING, v, found, [])], [("control", "ia-9")], first)
 
     def test_a_document_trestle_cannot_read(self):
         evidence = self.pack()
@@ -971,7 +997,7 @@ class Plants(Case):
     def test_every_control_has_its_three_plants_in_every_run_asked_for_it(self):
         want = {AWS: ["sc-7", "sc-7.5", "ac-4", "si-7", "sr-4", "sr-11"], AKS: ["sc-7", "sc-7.5"]}
         want[GKE] = want[AWS]
-        want[TWICE] = want[AWS] + list(LATER)
+        want[TWICE] = want[VAULT] = want[AWS] + list(LATER)
         for name, controls in want.items():
             run = json.loads(self.read(os.path.join(RUNS, name, "run.json")))
             names = plant.every(MAPPING, pack.cloud_of(MAPPING, run), run)
@@ -980,29 +1006,35 @@ class Plants(Case):
             for provenance in plant.PROVENANCE:
                 self.assertIn(provenance, names)
         # A run too early for a control gets none of its plants: there is nothing of it in the run to break.
-        early = plant.every(MAPPING, "aws", {"id": 39744285464})
-        self.assertFalse([n for n in early if n.endswith((":ac-6", ":ia-9", ":records-expired", ":agent-to-vault"))])
-        first = plant.every(MAPPING, "aws", {"id": 43199517532})
-        for n in ("missing:ac-6", "failed:ia-9", "uncontrolled:ia-9", "renamed:records-expired", "renamed:agent-to-vault"):
-            self.assertIn(n, first)
+        for cloud, (before, since) in FIRST.items():
+            early = plant.every(MAPPING, cloud, {"id": int(before.partition("-")[2])})
+            self.assertFalse([n for n in early
+                              if n.endswith((":ac-6", ":ia-9", ":records-expired", ":agent-to-vault"))], cloud)
+            first = plant.every(MAPPING, cloud, {"id": int(since.partition("-")[2])})
+            for n in ("missing:ac-6", "failed:ia-9", "uncontrolled:ia-9", "renamed:records-expired",
+                      "renamed:agent-to-vault"):
+                self.assertIn(n, first, cloud)
 
     def test_a_plant_for_a_control_the_run_is_too_early_for(self):
-        with self.assertRaises(SystemExit) as refused:
-            plant.apply(MAPPING, self.run_dir(AWS), "missing:ac-6")
-        self.assertIn("ac-6 is not asked of aws run 39744285464", str(refused.exception))
-        with self.assertRaises(SystemExit) as refused:
-            plant.apply(MAPPING, self.run_dir(AWS), "renamed:records-expired")
-        self.assertIn("unknown plant renamed:records-expired in aws run 39744285464", str(refused.exception))
+        for cloud, (before, _) in FIRST.items():
+            run = before.partition("-")[2]
+            with self.assertRaises(SystemExit) as refused:
+                plant.apply(MAPPING, self.run_dir(before), "missing:ac-6")
+            self.assertIn(f"ac-6 is not asked of {cloud} run {run}", str(refused.exception))
+            with self.assertRaises(SystemExit) as refused:
+                plant.apply(MAPPING, self.run_dir(before), "renamed:records-expired")
+            self.assertIn(f"unknown plant renamed:records-expired in {cloud} run {run}", str(refused.exception))
 
     def test_a_plant_of_the_later_controls_caught(self):
         # The two share a refused login and the login that had to work: a plant that takes either away must leave
         # both not satisfied, and one that breaks a line of one alone, that one alone.
-        for p, must in (("failed:ac-6", "ac-6"), ("renamed:records-expired", "ia-9"),
-                        ("missing:ac-6", "ac-6, ia-9"), ("renamed:vault-login-server", "ac-6, ia-9")):
-            evidence = self.pack(TWICE, p)
-            caught, why = gate.planted(MAPPING, evidence, p)
-            self.assertTrue(caught, why)
-            self.assertIn(f"({must})", why)
+        for name in (TWICE, VAULT):
+            for p, must in (("failed:ac-6", "ac-6"), ("renamed:records-expired", "ia-9"),
+                            ("missing:ac-6", "ac-6, ia-9"), ("renamed:vault-login-server", "ac-6, ia-9")):
+                evidence = self.pack(name, p)
+                caught, why = gate.planted(MAPPING, evidence, p)
+                self.assertTrue(caught, f"{name}: {why}")
+                self.assertIn(f"({must})", why, name)
 
 
 if __name__ == "__main__":

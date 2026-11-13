@@ -444,6 +444,11 @@
                     "value": "aws"
                   },
                   {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
+                  },
+                  {
                     "name": "related-iso-27001-2022",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "A.5.15"
@@ -517,6 +522,11 @@
                     "name": "since",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "aws run 43199517532"
+                  },
+                  {
+                    "name": "since",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke run 43414580093"
                   }
                 ],
                 "remarks": "What this leaves out: The records credential alone. The agent's own two tokens, the Kubernetes API token refused at the gateway and the rights of the person the agent acts for are tried in the flagship's daily runs on kind, not in a cloud run; of the person's rights a cloud run holds the evals' count, which this mapping does not name. Quotas and token budgets at the gateway are per agent, not per person (the flagship's gap 1). Scope is by tool and customer, not by field.",
@@ -535,6 +545,11 @@
                     "name": "cloud",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "aws"
+                  },
+                  {
+                    "name": "cloud",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke"
                   },
                   {
                     "name": "related-iso-27001-2022",
@@ -620,6 +635,11 @@
                     "name": "since",
                     "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
                     "value": "aws run 43199517532"
+                  },
+                  {
+                    "name": "since",
+                    "ns": "https://github.com/heyvaldemar/cloud-evidence-pack/ns",
+                    "value": "gke run 43414580093"
                   }
                 ],
                 "remarks": "What this leaves out: The records service and Vault alone. The gateway's check of the agent's token, and the MCP server's check of it with TokenReview, are tried in the flagship's daily runs on kind, not in a cloud run, and no check sends the MCP server a missing or wrong token. Services are identified; people are not (the flagship's gap 1).",
@@ -664,11 +684,11 @@
       }
     ],
     "metadata": {
-      "last-modified": "2026-11-13T04:52:30+00:00",
+      "last-modified": "2026-11-13T12:10:24+00:00",
       "oscal-version": "1.2.1",
       "remarks": "Made from mapping/controls.yaml by scripts/component.py. A control is here only where the flagship's own page has the row and a scheduled cloud run shows a violation its check refused. It is not a statement that a system meets a framework.",
       "title": "kubernetes-air-gapped-ai-agent on its scheduled cloud runs, mapped to NIST SP 800-53 Rev. 5.2.0",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "uuid": "f1e60162-dd81-501c-8ff7-27974f2b0aa0"
   }
