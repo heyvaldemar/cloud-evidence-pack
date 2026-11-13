@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-13
+
 ### Added
 
 - AC-6 Least Privilege and IA-9 Service Identification and Authentication, on AWS, from the flagship's Vault checks (`tests/e2e/vault.sh`, its ADR 24). Twenty-four checks, each one line of a run. AC-6: Vault refuses a login by the agent's service account, by another service account beside the MCP server and by the MCP server's token for the Kubernetes API, an agent pod cannot reach Vault, and a delete with a valid credential is refused, beside six lines that had to hold. IA-9: the records service refuses no credential, a random key, the cluster's own token, a credential for another audience, one that lives an hour and an expired one, beside eight lines that had to hold. In the pack of the scheduled AWS run of 2026-11-12, 43199517532, both are satisfied, and 60 of its 121 lines are now named by the mapping. NIST's crosswalk relates A.5.15, A.8.2 and A.8.18 to AC-6 and nothing to IA-9.
