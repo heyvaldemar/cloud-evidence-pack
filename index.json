@@ -1,5 +1,5 @@
 {
- "written_at": "2026-11-13T06:15:02+00:00",
+ "written_at": "2026-11-13T13:06:53+00:00",
  "stale_days": 10,
  "clouds": {
   "aws": {
@@ -46,10 +46,18 @@
   "gke": {
    "title": "Google Cloud",
    "workflow": ".github/workflows/gke.yml",
-   "state": "running: last scheduled run 2026-11-06",
+   "state": "running: last scheduled run 2026-11-13",
    "missing": false,
-   "packs_in_a_row": 1,
+   "packs_in_a_row": 2,
    "runs": [
+    {
+     "run": 43414580093,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43414580093",
+     "date": "2026-11-13",
+     "commit": "bc583c1",
+     "outcome": "pack",
+     "detail": "8 of 8 controls satisfied, by mapping 1.2.0"
+    },
     {
      "run": 42206932411,
      "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411",
