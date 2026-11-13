@@ -1,14 +1,22 @@
 {
- "written_at": "2026-11-12T01:47:40+00:00",
+ "written_at": "2026-11-13T03:34:18+00:00",
  "stale_days": 10,
  "clouds": {
   "aws": {
    "title": "AWS",
    "workflow": ".github/workflows/aws.yml",
-   "state": "running: last scheduled run 2026-11-05",
+   "state": "running: last scheduled run 2026-11-12",
    "missing": false,
-   "packs_in_a_row": 0,
+   "packs_in_a_row": 1,
    "runs": [
+    {
+     "run": 43199517532,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532",
+     "date": "2026-11-12",
+     "commit": "612768c",
+     "outcome": "pack",
+     "detail": "6 of 6 controls satisfied"
+    },
     {
      "run": 42005832115,
      "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115",

@@ -1,13 +1,14 @@
 # Every scheduled cloud run, and what became of it
 
-Written 2026-11-12 01:47 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
+Written 2026-11-13 03:34 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
 
-## AWS: running: last scheduled run 2026-11-05
+## AWS: running: last scheduled run 2026-11-12
 
-`.github/workflows/aws.yml`. Packs in a row, newest first: 0.
+`.github/workflows/aws.yml`. Packs in a row, newest first: 1.
 
 | Scheduled run | Date | Commit | What became of it | |
 |---|---|---|---|---|
+| [43199517532](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/43199517532) | 2026-11-12 | `612768c` | pack | 6 of 6 controls satisfied |
 | [42005832115](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42005832115) | 2026-11-05 | `473fa4a` | run with no pack | the run ended failure |
 | [40845619217](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/40845619217) | 2026-10-29 | `584de51` | run with no pack | the run ended failure |
 | [39744285464](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/39744285464) | 2026-10-22 | `78fdcc6` | not built yet |  |
