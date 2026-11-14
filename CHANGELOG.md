@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/stranger.sh TAG`: a whole release checked from an empty directory, with no token and nothing of a clone but the script and the pinned tools. Every pack and the source archive are verified for their exact identities, a pack with one byte appended is refused, the gate is run from the release's own source archive, and a pack whose record has one space added is refused. It refuses to run with a token in the environment.
+- `AGENTS.md` says how a run and a cloud for a control are added, where a number may come from, how a release is cut and in what order the work is done.
+
 ## [1.2.0] - 2026-11-13
 
 ### Added

@@ -168,6 +168,14 @@ python3 scripts/gate.py evidence --live
 
 `validate.sh` is trestle's validator over the pack's plan and results. `gate.py` builds the documents again from `evidence/run` and compares, and has cosign verify the flagship's signature on the run's record: it does that whenever it is given a pack, and passes nothing without it. With `--live` it also asks GitHub now for the run's record and the artifact's digest. Neither needs a token; cosign must be on the PATH.
 
+A whole release, from an empty directory and with no token:
+
+```sh
+env -i HOME="$(mktemp -d)" PATH="$PWD/.venv/bin:$(bash scripts/install-tools.sh):/usr/bin:/bin" bash scripts/stranger.sh v1.2.0
+```
+
+`stranger.sh` reads the release from GitHub's public addresses and takes nothing else from this clone. It verifies every pack and the source archive for their exact identities, shows each pack a copy with one byte appended, and runs the gate from the release's own source archive, then once more with one space added to the record the flagship signed. It refuses to run with a token in the environment.
+
 ## Quickstart
 
 One committed copy of a real run, made into a pack and judged. The network is used for NIST's catalog and the flagship's release the first time, and for Sigstore's trust root each time the gate verifies the flagship's signature:
@@ -209,6 +217,7 @@ Runner time on GitHub's hosted runners, and nothing else: no cloud account, no s
 | `scripts/index.py` | Every scheduled run of each cloud, and what became of it |
 | `scripts/plant.py`, `mutate.py`, `validate.sh` | The plants, the rules switched off in turn, the static checks |
 | `scripts/release-verify.sh` | What a release holds, checked as a stranger would: each pack's signature and provenance, and a changed copy refused |
+| `scripts/stranger.sh` | A whole release, checked from an empty directory with no token: every pack, the source archive, and the gate run from the release's own source |
 | `tests/fixtures/runs` | Real scheduled runs, each with the record the flagship signed, byte for byte as its branch holds them |
 | `tests/e2e/run.sh` | The whole run, as CI runs it |
 
