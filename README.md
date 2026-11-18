@@ -1,6 +1,6 @@
 # Every scheduled cloud run, and what became of it
 
-Written 2026-11-17 00:53 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
+Written 2026-11-18 00:07 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
 
 ## AWS: running: last scheduled run 2026-11-12
 
@@ -23,11 +23,12 @@ Written 2026-11-17 00:53 UTC from the flagship's own run history. A cloud with n
 | [42206932411](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42206932411) | 2026-11-06 | `473fa4a` | pack | 6 of 6 controls satisfied, by mapping 1.0.0 |
 | [41038578800](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41038578800) | 2026-10-30 | `6f81741` | run with no pack | the run ended failure |
 
-## Azure: running: last scheduled run 2026-11-10
+## Azure: running: last scheduled run 2026-11-17
 
-`.github/workflows/aks.yml`. Packs in a row, newest first: 2.
+`.github/workflows/aks.yml`. Packs in a row, newest first: 3.
 
 | Scheduled run | Date | Commit | What became of it | |
 |---|---|---|---|---|
+| [44082616399](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/44082616399) | 2026-11-17 | `91a08fb` | pack | 2 of 2 controls satisfied, by mapping 1.2.0 |
 | [42809539539](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539) | 2026-11-10 | `a943f70` | pack | 2 of 2 controls satisfied, by mapping 1.0.0 |
 | [41626192017](https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/41626192017) | 2026-11-03 | `27ba3c8` | pack | 2 of 2 controls satisfied, by mapping 1.0.0 |

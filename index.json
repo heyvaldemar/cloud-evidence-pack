@@ -1,5 +1,5 @@
 {
- "written_at": "2026-11-17T00:53:38+00:00",
+ "written_at": "2026-11-18T00:07:17+00:00",
  "stale_days": 10,
  "clouds": {
   "aws": {
@@ -79,10 +79,18 @@
   "aks": {
    "title": "Azure",
    "workflow": ".github/workflows/aks.yml",
-   "state": "running: last scheduled run 2026-11-10",
+   "state": "running: last scheduled run 2026-11-17",
    "missing": false,
-   "packs_in_a_row": 2,
+   "packs_in_a_row": 3,
    "runs": [
+    {
+     "run": 44082616399,
+     "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/44082616399",
+     "date": "2026-11-17",
+     "commit": "91a08fb",
+     "outcome": "pack",
+     "detail": "2 of 2 controls satisfied, by mapping 1.2.0"
+    },
     {
      "run": 42809539539,
      "url": "https://github.com/heyvaldemar/kubernetes-air-gapped-ai-agent/actions/runs/42809539539",
