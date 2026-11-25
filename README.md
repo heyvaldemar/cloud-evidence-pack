@@ -1,6 +1,6 @@
 # Every scheduled cloud run, and what became of it
 
-Written 2026-11-25 01:17 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
+Written 2026-11-25 07:21 UTC from the flagship's own run history. A cloud with no scheduled run in the last 10 days is reported as missing, not as a failure.
 
 ## AWS: running: last scheduled run 2026-11-19
 
